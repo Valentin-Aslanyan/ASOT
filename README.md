@@ -13,6 +13,7 @@ The structure of most Python files is as follows
 `frequently changed variables`
 
  \
+ 
  \
 
 `import sys`
@@ -24,6 +25,7 @@ The structure of most Python files is as follows
 `import matplotlib.pyplot as plt`
 
  \
+ 
  \
 
 `routine specific code`
