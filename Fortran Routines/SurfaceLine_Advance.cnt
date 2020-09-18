@@ -1,0 +1,16 @@
+!arms.cnt directory
+./arms.cnt
+!Initial cage file
+./SurfaceLineData/SLine_4000.bin
+!t_start
+4000.0
+!delta_t
+10.0
+!solar_Radius
+70000000000.0
+!number of outputs (for plot_t)
+1
+!plot_t, each one on new line
+6000.0
+!SurfaceLine_outputs
+./SurfaceLineData/SLine_6000.bin

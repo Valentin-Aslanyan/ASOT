@@ -1,0 +1,16 @@
+!arms.cnt file
+./arms.cnt
+!start Q file
+./PFLS/0044295/qslR1Fine.bin
+!end Q file
+./PFLS/0059184/qslR1Fine.bin
+!Output file
+./PFLS/Connection_18_0044295_0059184.bin
+!start time
+4200.0
+!end time
+5300.0
+!delta_t
+10.0
+!solar_Radius
+7E10
