@@ -6,9 +6,14 @@
 
     .
 
-Most of the routines are written in Python3. **To make them work, you must change the path near the top of each file, which by default is `'/Change/This/Path'`**
+Most of the routines are written in Python3. **To make them work, you must change the path near the top of each file, which by default is `'/Change/This/Path'`.**
+
+The structure of most Python files is as follows
 
 `frequently changed variables`
+
+ \
+ \
 
 `import sys`
 
@@ -17,6 +22,11 @@ Most of the routines are written in Python3. **To make them work, you must chang
 `from ARMS_ASOT_Functions import *`
 
 `import matplotlib.pyplot as plt`
+
+ \
+ \
+
+`routine specific code`
 
     .
     
