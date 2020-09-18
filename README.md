@@ -11,8 +11,8 @@ Most of the routines are written in Python3. **To make them work, you must chang
 The structure of most Python files is as follows
 
 `frequently changed variables`
- \
- \
+  
+  
 
 `import sys`
 
@@ -21,8 +21,8 @@ The structure of most Python files is as follows
 `from ARMS_ASOT_Functions import *`
 
 `import matplotlib.pyplot as plt`
- \
- \
+  
+  
 
 `routine specific code`
 
