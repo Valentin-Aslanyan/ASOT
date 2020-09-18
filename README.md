@@ -26,10 +26,13 @@ The structure of most Python files is as follows
 
 `routine specific code`
 
-    .
-    
-        .
-        
-            .
+  
+  
+  
+  
+  
+There are also routines to analyze [**QSL Squasher**](https://arxiv.org/abs/1609.00724), which is [hosted here](https://bitbucket.org/tassev/qsl_squasher).
+
+Please acknowledge the use of this software when publishing work which made significant use of it.
 
 Note that this repository is an effort to share a personal set of routines which have many embarrassingly poor optimizations and the like. Any input is appreciated.
