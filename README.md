@@ -14,7 +14,7 @@ The structure of most Python files is as follows:<br>
     
     import sys
     sys.path[:0]=['/Change/This/Path']
-    from ARMS_ASOT_Functions import *
+    from ASOT_Functions_Python import *
     import matplotlib.pyplot as plt
 
     routine specific code
