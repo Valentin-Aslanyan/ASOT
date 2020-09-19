@@ -9,12 +9,12 @@
 Most of the routines are written in Python3. **To make them work, you must change the path near the top of each file, which by default is `'/Change/This/Path'` to the directory where the file `ASOT_Functions_Python.py` is kept.**
 
 The structure of most Python files is as follows:<br>
-    `frequently changed variables`<br><br>
-
-    `import sys`<br>
-    `sys.path[:0]=['/Change/This/Path']`<br>
-    `from ARMS_ASOT_Functions import *`<br>
-    `import matplotlib.pyplot as plt`<br><br>
+    `frequently changed variables`
+    
+    `import sys`
+    `sys.path[:0]=['/Change/This/Path']`
+    `from ARMS_ASOT_Functions import *`
+    `import matplotlib.pyplot as plt`
 
     `routine specific code`
 <br><br><br><br>
