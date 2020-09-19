@@ -16,7 +16,7 @@ OCB_file="./PFLS/0044295/qslR1.bin"
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ARMS_ASOT_Functions import *
+from ASOT_Functions_Python import *
 import matplotlib.pyplot as plt
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')

@@ -12,7 +12,7 @@ delta_t=10.0
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ARMS_ASOT_Functions import *
+from ASOT_Functions_Python import *
 
 
 save_connection_map(connection_filename,CNT_file,start_directory,end_directory,start_time,end_time,delta_t,solar_Radius)

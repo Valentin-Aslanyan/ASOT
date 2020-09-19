@@ -12,7 +12,7 @@ phi_start  =[-0.811,+1.135,-0.282,-0.015,+0.216,-0.155,+0.425,+0.771,-0.517,-0.6
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ARMS_ASOT_Functions import *
+from ASOT_Functions_Python import *
 import matplotlib.pyplot as plt
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')

@@ -2,7 +2,7 @@
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ARMS_ASOT_Functions import *
+from ASOT_Functions_Python import *
 
 
 rlsfl=7.000e+10

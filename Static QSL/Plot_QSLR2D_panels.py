@@ -31,7 +31,7 @@ plot_t=[4600.0,4800.0,5000.0,5200.0,5400.0,5600.0,5800.0,6000.0]
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ARMS_ASOT_Functions import *
+from ASOT_Functions_Python import *
 import matplotlib.pyplot as plt
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')

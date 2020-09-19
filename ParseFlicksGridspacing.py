@@ -10,7 +10,7 @@ flicks_file="flicks.0000000"
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ARMS_ASOT_Functions import *
+from ASOT_Functions_Python import *
 
 
 def is_block_in_limits(coord_logR,coord_theta,coord_phi,target_R,target_theta,target_phi):

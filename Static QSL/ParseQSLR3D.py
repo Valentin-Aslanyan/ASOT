@@ -5,7 +5,7 @@ filename="./PFLS/0078272/qsl.bin"
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ARMS_ASOT_Functions import *
+from ASOT_Functions_Python import *
 from mayavi import mlab
 
 
