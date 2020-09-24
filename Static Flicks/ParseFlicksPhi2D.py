@@ -8,17 +8,11 @@ R_limits=None		#None or Solar radii
 
 plot_gridfieldlines=True
 gridfieldlines_lims=[1.0,3.0]
-R_start4    =[+1.000,+1.000,+1.000,+1.000]
-theta_start4=[+1.771]
-phi_start4  =[+0.017]
+R_start    =[+1.000,+1.000,+1.000,+1.000]
+theta_start=[+1.771]
+phi_start  =[+0.017]
 
-R_start3    =[+1.000]
-theta_start3=[+1.710]
-phi_start3  =[+0.000]
 
-R_start2    =[+1.000]
-theta_start2=[+1.766]
-phi_start2  =[+0.000]
 
 
 import sys
@@ -95,27 +89,13 @@ if plot_gridfieldlines:
 			arc2y=np.exp(coord_logR[idx][1])*np.cos(np.pi-anglearc)
 			plt.plot(arc1x,arc1y,color="grey",linewidth=1)
 			plt.plot(arc2x,arc2y,color="grey",linewidth=1)
-	for idx in range(min(len(R_start4),len(theta_start4),len(phi_start4))):
-		field_line_start=np.array([R_start4[idx],theta_start4[idx],phi_start4[idx]])
+	for idx in range(min(len(R_start),len(theta_start),len(phi_start))):
+		field_line_start=np.array([R_start[idx],theta_start[idx],phi_start[idx]])
 		field_line_sph=field_line_flicks(field_line_start,coord_logR,coord_theta,coord_phi,B_flicks,gridfieldlines_lims[0],gridfieldlines_lims[1],nlblks,n1pm1,n2pm1,n3pm1,step_size=1E-2)
 		field_line_X=field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.cos(field_line_sph[:,2]-target_phi/180.0*np.pi)
 		field_line_Y=-field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.sin(field_line_sph[:,2]-target_phi/180.0*np.pi)
 		field_line_Z=field_line_sph[:,0]*np.cos(np.pi-field_line_sph[:,1])
 		plt.plot(field_line_X,field_line_Z,color="#386CB0",linewidth=2)
-	for idx in range(min(len(R_start3),len(theta_start3),len(phi_start3))):
-		field_line_start=np.array([R_start3[idx],theta_start3[idx],phi_start3[idx]])
-		field_line_sph=field_line_flicks(field_line_start,coord_logR,coord_theta,coord_phi,B_flicks,gridfieldlines_lims[0],gridfieldlines_lims[1],nlblks,n1pm1,n2pm1,n3pm1,step_size=1E-2)
-		field_line_X=field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.cos(field_line_sph[:,2]-target_phi/180.0*np.pi)
-		field_line_Y=-field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.sin(field_line_sph[:,2]-target_phi/180.0*np.pi)
-		field_line_Z=field_line_sph[:,0]*np.cos(np.pi-field_line_sph[:,1])
-		plt.plot(field_line_X,field_line_Z,color="#FFFF99",linewidth=2)
-	for idx in range(min(len(R_start2),len(theta_start2),len(phi_start2))):
-		field_line_start=np.array([R_start2[idx],theta_start2[idx],phi_start2[idx]])
-		field_line_sph=field_line_flicks(field_line_start,coord_logR,coord_theta,coord_phi,B_flicks,gridfieldlines_lims[0],gridfieldlines_lims[1],nlblks,n1pm1,n2pm1,n3pm1,step_size=1E-2)
-		field_line_X=field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.cos(field_line_sph[:,2]-target_phi/180.0*np.pi)
-		field_line_Y=-field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.sin(field_line_sph[:,2]-target_phi/180.0*np.pi)
-		field_line_Z=field_line_sph[:,0]*np.cos(np.pi-field_line_sph[:,1])
-		plt.plot(field_line_X,field_line_Z,color="#FDC086",linewidth=2)
 	plt.axis('off')
 	plt.xlim([0,3.1])
 	plt.ylim([-3,3])
@@ -229,27 +209,14 @@ if plot_gridfieldlines:
 			arc2y=np.exp(coord_logR[idx][1])*np.cos(np.pi-anglearc)
 			plt.plot(arc1x,arc1y,color="grey",linewidth=1)
 			plt.plot(arc2x,arc2y,color="grey",linewidth=1)
-	for idx in range(min(len(R_start4),len(theta_start4),len(phi_start4))):
-		field_line_start=np.array([R_start4[idx],theta_start4[idx],phi_start4[idx]])
+	for idx in range(min(len(R_start),len(theta_start),len(phi_start))):
+		field_line_start=np.array([R_start[idx],theta_start[idx],phi_start[idx]])
 		field_line_sph=field_line_flicks(field_line_start,coord_logR,coord_theta,coord_phi,B_flicks,gridfieldlines_lims[0],gridfieldlines_lims[1],nlblks,n1pm1,n2pm1,n3pm1,step_size=1E-2)
 		field_line_X=field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.cos(field_line_sph[:,2]-target_phi/180.0*np.pi)
 		field_line_Y=-field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.sin(field_line_sph[:,2]-target_phi/180.0*np.pi)
 		field_line_Z=field_line_sph[:,0]*np.cos(np.pi-field_line_sph[:,1])
 		plt.plot(field_line_X,field_line_Z,color="#386CB0",linewidth=2)
-	for idx in range(min(len(R_start3),len(theta_start3),len(phi_start3))):
-		field_line_start=np.array([R_start3[idx],theta_start3[idx],phi_start3[idx]])
-		field_line_sph=field_line_flicks(field_line_start,coord_logR,coord_theta,coord_phi,B_flicks,gridfieldlines_lims[0],gridfieldlines_lims[1],nlblks,n1pm1,n2pm1,n3pm1,step_size=1E-2)
-		field_line_X=field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.cos(field_line_sph[:,2]-target_phi/180.0*np.pi)
-		field_line_Y=-field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.sin(field_line_sph[:,2]-target_phi/180.0*np.pi)
-		field_line_Z=field_line_sph[:,0]*np.cos(np.pi-field_line_sph[:,1])
-		plt.plot(field_line_X,field_line_Z,color="#FFFF99",linewidth=2)
-	for idx in range(min(len(R_start2),len(theta_start2),len(phi_start2))):
-		field_line_start=np.array([R_start2[idx],theta_start2[idx],phi_start2[idx]])
-		field_line_sph=field_line_flicks(field_line_start,coord_logR,coord_theta,coord_phi,B_flicks,gridfieldlines_lims[0],gridfieldlines_lims[1],nlblks,n1pm1,n2pm1,n3pm1,step_size=1E-2)
-		field_line_X=field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.cos(field_line_sph[:,2]-target_phi/180.0*np.pi)
-		field_line_Y=-field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.sin(field_line_sph[:,2]-target_phi/180.0*np.pi)
-		field_line_Z=field_line_sph[:,0]*np.cos(np.pi-field_line_sph[:,1])
-		plt.plot(field_line_X,field_line_Z,color="#FDC086",linewidth=2)
+
 plt.axis('off')
 plt.xlim([0,3.1])
 plt.ylim([-3,3])
