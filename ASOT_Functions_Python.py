@@ -86,6 +86,60 @@ def get_flicks_grid_dimensions(data):
 	return nlblk,n1p,n2p,n3p,nvar
 
 
+def read_bfield_file(file_directory,bfield_file):
+	#Read header file
+	hdrfile=open(os.path.join(file_directory,"bfield.hdr"),"r")
+	hdrfile.readline()
+	line=hdrfile.readline()
+	if 'spherical exponential' not in line.lower():
+		print('Warning! Coordinate type "'+line+'" not recognized')
+	line=hdrfile.readline()
+	n1p=int(line[:2])
+	line=hdrfile.readline()
+	n2p=int(line[:2])
+	line=hdrfile.readline()
+	n3p=int(line[:2])
+	hdrfile.close()
+	print(n1p,n2p,n3p)
+
+	#Read main bfield file
+	bfieldfile=open(os.path.join(file_directory,bfield_file),"rb")
+	bfieldfile.read(4)
+	time=struct.unpack('>d', bfieldfile.read(8))[0]
+	bfieldfile.read(8)
+	ntblks=struct.unpack('>i', bfieldfile.read(4))[0]
+	nlblks=struct.unpack('>i', bfieldfile.read(4))[0]
+	bfieldfile.read(4)
+
+	coord_logR=np.zeros((nlblks,2))
+	coord_theta=np.zeros((nlblks,2))
+	coord_phi=np.zeros((nlblks,2))
+	data=np.zeros((nlblks,n3p,n2p,n1p,3))
+
+	idx_leaf=0
+	for idx in range(ntblks):
+		bfieldfile.read(4)
+		iputwrk=struct.unpack('>'+35*'i', bfieldfile.read(35*4))
+		bfieldfile.read(8)
+		rputwrk=struct.unpack('>'+6*'d', bfieldfile.read(6*8))
+		bfieldfile.read(4)
+		if iputwrk[2]==1:
+			coord_logR[idx_leaf,:]=[rputwrk[0],rputwrk[1]]
+			coord_theta[idx_leaf,:]=[rputwrk[2]+np.pi*0.5,rputwrk[3]+np.pi*0.5]
+			coord_phi[idx_leaf,:]=[rputwrk[4],rputwrk[5]]
+			for idx_p in range(n3p):
+				for idx_t in range(n2p):
+					for idx_r in range(n1p):
+						bfieldfile.read(4)
+						data[idx_leaf,idx_p,idx_t,idx_r,:]=struct.unpack('>'+3*'d', bfieldfile.read(24))
+						bfieldfile.read(4)
+			idx_leaf+=1
+
+
+	bfieldfile.close()
+	return time,ntblks,nlblks,coord_logR,coord_theta,coord_phi,data
+
+
 def interp_pointpair(x,x0,x1,y0,y1):
 	if x0==x1:
 		return y0
