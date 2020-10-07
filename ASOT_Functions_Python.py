@@ -77,6 +77,14 @@ def read_flicks_file(file_directory,flicks_file):
 	return time,ntblks,nlblks,newgrd,coord_logR,coord_theta,coord_phi,data
 
 
+def get_flicks_time(flicks_file):
+	flicksfile=open(flicks_file,"rb")
+	flicksfile.read(25)
+	time=struct.unpack('>f', flicksfile.read(4))[0]
+	flicksfile.close()
+	return time
+
+
 def get_flicks_grid_dimensions(data):
 	nlblk=np.shape(data)[0]
 	n1p=np.shape(data)[3]
@@ -100,7 +108,6 @@ def read_bfield_file(file_directory,bfield_file):
 	line=hdrfile.readline()
 	n3p=int(line[:2])
 	hdrfile.close()
-	print(n1p,n2p,n3p)
 
 	#Read main bfield file
 	bfieldfile=open(os.path.join(file_directory,bfield_file),"rb")
@@ -540,7 +547,7 @@ def rk4_field_trace_flicks(pos_in,coord_logR,coord_theta,coord_phi,B_flicks,dt,n
 			idx_theta=n2pm1-1
 		idx_phi=int(np.floor((p_0-coord_phi[idx_flicks,0])*n3pm1/(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])))
 		if idx_phi==n3pm1:
-			idx_theta=n3pm1-1
+			idx_phi=n3pm1-1
 
 		logRl=idx_logR/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
 		logRr=(idx_logR+1)/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
@@ -578,7 +585,7 @@ def rk4_field_trace_flicks(pos_in,coord_logR,coord_theta,coord_phi,B_flicks,dt,n
 			idx_theta=n2pm1-1
 		idx_phi=int(np.floor((p_1-coord_phi[idx_flicks,0])*n3pm1/(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])))
 		if idx_phi==n3pm1:
-			idx_theta=n3pm1-1
+			idx_phi=n3pm1-1
 
 		logRl=idx_logR/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
 		logRr=(idx_logR+1)/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
@@ -614,7 +621,7 @@ def rk4_field_trace_flicks(pos_in,coord_logR,coord_theta,coord_phi,B_flicks,dt,n
 			idx_theta=n2pm1-1
 		idx_phi=int(np.floor((p_2-coord_phi[idx_flicks,0])*n3pm1/(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])))
 		if idx_phi==n3pm1:
-			idx_theta=n3pm1-1
+			idx_phi=n3pm1-1
 
 		logRl=idx_logR/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
 		logRr=(idx_logR+1)/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
@@ -650,7 +657,7 @@ def rk4_field_trace_flicks(pos_in,coord_logR,coord_theta,coord_phi,B_flicks,dt,n
 			idx_theta=n2pm1-1
 		idx_phi=int(np.floor((p_3-coord_phi[idx_flicks,0])*n3pm1/(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])))
 		if idx_phi==n3pm1:
-			idx_theta=n3pm1-1
+			idx_phi=n3pm1-1
 
 		logRl=idx_logR/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
 		logRr=(idx_logR+1)/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
@@ -676,6 +683,173 @@ def rk4_field_trace_flicks(pos_in,coord_logR,coord_theta,coord_phi,B_flicks,dt,n
 		p_4=0.0
 
 	return np.array([r_4,t_4,p_4]),idx_flicks,block_found
+
+
+def rk4_velocity_trace_flicks(pos_in,coord_logR,coord_theta,coord_phi,v_flicks,dt,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks,solar_Radius):
+
+	r_0=pos_in[0]
+	log_r_0=np.log(r_0)
+	t_0=pos_in[1]
+	p_0=pos_in[2]
+	sin_th=np.sin(t_0)
+	cos_th=np.cos(t_0)
+	sin_ph=np.sin(p_0)
+	cos_ph=np.cos(p_0)
+	x_0=r_0*sin_th*cos_ph*solar_Radius
+	y_0=r_0*sin_th*sin_ph*solar_Radius
+	z_0=r_0*cos_th*solar_Radius
+	if t_0>np.pi:
+		t_0-=np.pi
+	elif t_0<0.0:
+		t_0+=np.pi
+	if p_0>np.pi:
+		p_0-=2.0*np.pi
+	elif p_0<-np.pi:
+		p_0+=2.0*np.pi
+
+	idx_flicks,block_found=find_flicks_idx(log_r_0,t_0,p_0,coord_logR,coord_theta,coord_phi,nlblks,idx_flicks)
+	if block_found:
+		idx_logR=int(np.floor((log_r_0-coord_logR[idx_flicks,0])*n1pm1/(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])))
+		if idx_logR==n1pm1:
+			idx_logR=n1pm1-1
+		idx_theta=int(np.floor((t_0-coord_theta[idx_flicks,0])*n2pm1/(coord_theta[idx_flicks,1]-coord_theta[idx_flicks,0])))
+		if idx_theta==n2pm1:
+			idx_theta=n2pm1-1
+		idx_phi=int(np.floor((p_0-coord_phi[idx_flicks,0])*n3pm1/(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])))
+		if idx_phi==n3pm1:
+			idx_phi=n3pm1-1
+
+		logRl=idx_logR/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
+		logRr=(idx_logR+1)/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
+		thetal=idx_theta/n2pm1*(coord_theta[idx_flicks,1]-coord_theta[idx_flicks,0])+coord_theta[idx_flicks,0]
+		thetar=(idx_theta+1)/n2pm1*(coord_theta[idx_flicks,1]-coord_theta[idx_flicks,0])+coord_theta[idx_flicks,0]
+		phil=idx_phi/n3pm1*(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])+coord_phi[idx_flicks,0]
+		phir=(idx_phi+1)/n3pm1*(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])+coord_phi[idx_flicks,0]
+
+		v_0=Trilinear_interpolation(log_r_0,t_0,p_0,logRl,logRr,thetal,thetar,phil,phir,v_flicks[idx_flicks,idx_phi,idx_theta,idx_logR,:],v_flicks[idx_flicks,idx_phi+1,idx_theta,idx_logR,:],v_flicks[idx_flicks,idx_phi,idx_theta+1,idx_logR,:], v_flicks[idx_flicks,idx_phi+1,idx_theta+1,idx_logR,:],v_flicks[idx_flicks,idx_phi,idx_theta,idx_logR+1,:], v_flicks[idx_flicks,idx_phi+1,idx_theta,idx_logR+1,:],v_flicks[idx_flicks,idx_phi,idx_theta+1,idx_logR+1,:], v_flicks[idx_flicks,idx_phi+1,idx_theta+1,idx_logR+1,:])
+		k_1_x=dt*(v_0[0]*sin_th*cos_ph+v_0[1]*cos_th*cos_ph-v_0[2]*sin_ph)
+		k_1_y=dt*(v_0[0]*sin_th*sin_ph+v_0[1]*cos_th*sin_ph+v_0[2]*cos_ph)
+		k_1_z=dt*(v_0[0]*cos_th-v_0[1]*sin_th)
+
+		x_1=x_0+k_1_x*0.5
+		y_1=y_0+k_1_y*0.5
+		z_1=z_0+k_1_z*0.5
+		r_1=np.sqrt(x_1**2+y_1**2+z_1**2)
+		log_r_1=np.log(r_1/solar_Radius)
+		t_1=np.arccos(z_1/r_1)
+		p_1=np.arctan2(y_1,x_1)
+		sin_th=np.sin(t_1)
+		cos_th=np.cos(t_1)
+		sin_ph=np.sin(p_1)
+		cos_ph=np.cos(p_1)
+
+	if block_found:
+		idx_flicks,block_found=find_flicks_idx(log_r_1,t_1,p_1,coord_logR,coord_theta,coord_phi,nlblks,idx_flicks)
+	if block_found:
+		idx_logR=int(np.floor((log_r_1-coord_logR[idx_flicks,0])*n1pm1/(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])))
+		if idx_logR==n1pm1:
+			idx_logR=n1pm1-1
+		idx_theta=int(np.floor((t_1-coord_theta[idx_flicks,0])*n2pm1/(coord_theta[idx_flicks,1]-coord_theta[idx_flicks,0])))
+		if idx_theta==n2pm1:
+			idx_theta=n2pm1-1
+		idx_phi=int(np.floor((p_1-coord_phi[idx_flicks,0])*n3pm1/(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])))
+		if idx_phi==n3pm1:
+			idx_phi=n3pm1-1
+
+		logRl=idx_logR/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
+		logRr=(idx_logR+1)/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
+		thetal=idx_theta/n2pm1*(coord_theta[idx_flicks,1]-coord_theta[idx_flicks,0])+coord_theta[idx_flicks,0]
+		thetar=(idx_theta+1)/n2pm1*(coord_theta[idx_flicks,1]-coord_theta[idx_flicks,0])+coord_theta[idx_flicks,0]
+		phil=idx_phi/n3pm1*(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])+coord_phi[idx_flicks,0]
+		phir=(idx_phi+1)/n3pm1*(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])+coord_phi[idx_flicks,0]
+		v_1=Trilinear_interpolation(log_r_1,t_1,p_1,logRl,logRr,thetal,thetar,phil,phir,v_flicks[idx_flicks,idx_phi,idx_theta,idx_logR,:],v_flicks[idx_flicks,idx_phi+1,idx_theta,idx_logR,:],v_flicks[idx_flicks,idx_phi,idx_theta+1,idx_logR,:], v_flicks[idx_flicks,idx_phi+1,idx_theta+1,idx_logR,:],v_flicks[idx_flicks,idx_phi,idx_theta,idx_logR+1,:], v_flicks[idx_flicks,idx_phi+1,idx_theta,idx_logR+1,:],v_flicks[idx_flicks,idx_phi,idx_theta+1,idx_logR+1,:], v_flicks[idx_flicks,idx_phi+1,idx_theta+1,idx_logR+1,:])
+		k_2_x=dt*(v_1[0]*sin_th*cos_ph+v_1[1]*cos_th*cos_ph-v_1[2]*sin_ph)
+		k_2_y=dt*(v_1[0]*sin_th*sin_ph+v_1[1]*cos_th*sin_ph+v_1[2]*cos_ph)
+		k_2_z=dt*(v_1[0]*cos_th-v_1[1]*sin_th)
+		
+		x_2=x_0+k_2_x*0.5
+		y_2=y_0+k_2_y*0.5
+		z_2=z_0+k_2_z*0.5
+		r_2=np.sqrt(x_2**2+y_2**2+z_2**2)
+		log_r_2=np.log(r_2/solar_Radius)
+		t_2=np.arccos(z_2/r_2)
+		p_2=np.arctan2(y_2,x_2)
+		sin_th=np.sin(t_2)
+		cos_th=np.cos(t_2)
+		sin_ph=np.sin(p_2)
+		cos_ph=np.cos(p_2)
+	if block_found:
+		idx_flicks,block_found=find_flicks_idx(log_r_2,t_2,p_2,coord_logR,coord_theta,coord_phi,nlblks,idx_flicks)
+	if block_found:
+		idx_logR=int(np.floor((log_r_2-coord_logR[idx_flicks,0])*n1pm1/(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])))
+		if idx_logR==n1pm1:
+			idx_logR=n1pm1-1
+		idx_theta=int(np.floor((t_2-coord_theta[idx_flicks,0])*n2pm1/(coord_theta[idx_flicks,1]-coord_theta[idx_flicks,0])))
+		if idx_theta==n2pm1:
+			idx_theta=n2pm1-1
+		idx_phi=int(np.floor((p_2-coord_phi[idx_flicks,0])*n3pm1/(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])))
+		if idx_phi==n3pm1:
+			idx_phi=n3pm1-1
+
+		logRl=idx_logR/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
+		logRr=(idx_logR+1)/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
+		thetal=idx_theta/n2pm1*(coord_theta[idx_flicks,1]-coord_theta[idx_flicks,0])+coord_theta[idx_flicks,0]
+		thetar=(idx_theta+1)/n2pm1*(coord_theta[idx_flicks,1]-coord_theta[idx_flicks,0])+coord_theta[idx_flicks,0]
+		phil=idx_phi/n3pm1*(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])+coord_phi[idx_flicks,0]
+		phir=(idx_phi+1)/n3pm1*(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])+coord_phi[idx_flicks,0]
+		v_2=Trilinear_interpolation(log_r_2,t_2,p_2,logRl,logRr,thetal,thetar,phil,phir,v_flicks[idx_flicks,idx_phi,idx_theta,idx_logR,:],v_flicks[idx_flicks,idx_phi+1,idx_theta,idx_logR,:],v_flicks[idx_flicks,idx_phi,idx_theta+1,idx_logR,:], v_flicks[idx_flicks,idx_phi+1,idx_theta+1,idx_logR,:],v_flicks[idx_flicks,idx_phi,idx_theta,idx_logR+1,:], v_flicks[idx_flicks,idx_phi+1,idx_theta,idx_logR+1,:],v_flicks[idx_flicks,idx_phi,idx_theta+1,idx_logR+1,:], v_flicks[idx_flicks,idx_phi+1,idx_theta+1,idx_logR+1,:])
+		k_3_x=dt*(v_2[0]*sin_th*cos_ph+v_2[1]*cos_th*cos_ph-v_2[2]*sin_ph)
+		k_3_y=dt*(v_2[0]*sin_th*sin_ph+v_2[1]*cos_th*sin_ph+v_2[2]*cos_ph)
+		k_3_z=dt*(v_2[0]*cos_th-v_2[1]*sin_th)
+
+		x_3=x_0+k_3_x
+		y_3=y_0+k_3_y
+		z_3=z_0+k_3_z
+		r_3=np.sqrt(x_3**2+y_3**2+z_3**2)
+		log_r_3=np.log(r_3/solar_Radius)
+		t_3=np.arccos(z_3/r_3)
+		p_3=np.arctan2(y_3,x_3)
+		sin_th=np.sin(t_3)
+		cos_th=np.cos(t_3)
+		sin_ph=np.sin(p_3)
+		cos_ph=np.cos(p_3)
+	if block_found:
+		idx_flicks,block_found=find_flicks_idx(log_r_3,t_3,p_3,coord_logR,coord_theta,coord_phi,nlblks,idx_flicks)
+	if block_found:
+		idx_logR=int(np.floor((log_r_3-coord_logR[idx_flicks,0])*n1pm1/(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])))
+		if idx_logR==n1pm1:
+			idx_logR=n1pm1-1
+		idx_theta=int(np.floor((t_3-coord_theta[idx_flicks,0])*n2pm1/(coord_theta[idx_flicks,1]-coord_theta[idx_flicks,0])))
+		if idx_theta==n2pm1:
+			idx_theta=n2pm1-1
+		idx_phi=int(np.floor((p_3-coord_phi[idx_flicks,0])*n3pm1/(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])))
+		if idx_phi==n3pm1:
+			idx_phi=n3pm1-1
+
+		logRl=idx_logR/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
+		logRr=(idx_logR+1)/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
+		thetal=idx_theta/n2pm1*(coord_theta[idx_flicks,1]-coord_theta[idx_flicks,0])+coord_theta[idx_flicks,0]
+		thetar=(idx_theta+1)/n2pm1*(coord_theta[idx_flicks,1]-coord_theta[idx_flicks,0])+coord_theta[idx_flicks,0]
+		phil=idx_phi/n3pm1*(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])+coord_phi[idx_flicks,0]
+		phir=(idx_phi+1)/n3pm1*(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])+coord_phi[idx_flicks,0]
+		v_3=Trilinear_interpolation(log_r_3,t_3,p_3,logRl,logRr,thetal,thetar,phil,phir,v_flicks[idx_flicks,idx_phi,idx_theta,idx_logR,:],v_flicks[idx_flicks,idx_phi+1,idx_theta,idx_logR,:],v_flicks[idx_flicks,idx_phi,idx_theta+1,idx_logR,:], v_flicks[idx_flicks,idx_phi+1,idx_theta+1,idx_logR,:],v_flicks[idx_flicks,idx_phi,idx_theta,idx_logR+1,:], v_flicks[idx_flicks,idx_phi+1,idx_theta,idx_logR+1,:],v_flicks[idx_flicks,idx_phi,idx_theta+1,idx_logR+1,:], v_flicks[idx_flicks,idx_phi+1,idx_theta+1,idx_logR+1,:])
+		k_4_x=dt*(v_3[0]*sin_th*cos_ph+v_3[1]*cos_th*cos_ph-v_3[2]*sin_ph)
+		k_4_y=dt*(v_3[0]*sin_th*sin_ph+v_3[1]*cos_th*sin_ph+v_3[2]*cos_ph)
+		k_4_z=dt*(v_3[0]*cos_th-v_3[1]*sin_th)
+
+		x_4=x_0+(k_1_x+2.0*k_2_x+2.0*k_3_x+k_4_x)/6.0
+		y_4=y_0+(k_1_y+2.0*k_2_y+2.0*k_3_y+k_4_y)/6.0
+		z_4=z_0+(k_1_z+2.0*k_2_z+2.0*k_3_z+k_4_z)/6.0
+
+		r_4=np.sqrt(x_4**2+y_4**2+z_4**2)
+		t_4=np.arccos(z_4/r_4)
+		p_4=np.arctan2(y_4,x_4)
+	else:
+		r_4=0.0
+		t_4=0.0
+		p_4=0.0
+
+	return np.array([r_4/solar_Radius,t_4,p_4]),idx_flicks,block_found
 
 
 def field_line_cartesian(position0,X,Y,Z,B,R_min,R_max,max_steps=1E6,step_size=1E-2):
@@ -789,7 +963,7 @@ def data_along_field_line_flicks(position0,coord_logR,coord_theta,coord_phi,B_fl
 			idx_theta=n2pm1-1
 		idx_phi=int(np.floor((position0[2]-coord_phi[idx_flicks,0])*n3pm1/(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])))
 		if idx_phi==n3pm1:
-			idx_theta=n3pm1-1
+			idx_phi=n3pm1-1
 
 		logRl=idx_logR/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
 		logRr=(idx_logR+1)/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
@@ -815,7 +989,7 @@ def data_along_field_line_flicks(position0,coord_logR,coord_theta,coord_phi,B_fl
 					idx_theta=n2pm1-1
 				idx_phi=int(np.floor((backward_temp[idx,2]-coord_phi[idx_flicks,0])*n3pm1/(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])))
 				if idx_phi==n3pm1:
-					idx_theta=n3pm1-1
+					idx_phi=n3pm1-1
 
 				logRl=idx_logR/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
 				logRr=(idx_logR+1)/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
@@ -848,7 +1022,7 @@ def data_along_field_line_flicks(position0,coord_logR,coord_theta,coord_phi,B_fl
 					idx_theta=n2pm1-1
 				idx_phi=int(np.floor((forward_temp[idx,2]-coord_phi[idx_flicks,0])*n3pm1/(coord_phi[idx_flicks,1]-coord_phi[idx_flicks,0])))
 				if idx_phi==n3pm1:
-					idx_theta=n3pm1-1
+					idx_phi=n3pm1-1
 
 				logRl=idx_logR/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
 				logRr=(idx_logR+1)/n1pm1*(coord_logR[idx_flicks,1]-coord_logR[idx_flicks,0])+coord_logR[idx_flicks,0]
@@ -870,6 +1044,41 @@ def data_along_field_line_flicks(position0,coord_logR,coord_theta,coord_phi,B_fl
 		final_curve=np.array([np.concatenate((position0,np.zeros((shape_data))))])
 
 	return final_curve
+
+
+def particle_advance_flicks(num_points,R_points,theta_points,phi_points,coord_logR,coord_theta,coord_phi,v_flicks,dt,nlblks,n1pm1,n2pm1,n3pm1,solar_Radius):
+	R_new=np.zeros((num_points))
+	theta_new=np.zeros((num_points))
+	phi_new=np.zeros((num_points))
+	for idx in range(num_points):
+		idx_flicks,block_found=find_flicks_idx(R_points[idx],theta_points[idx],phi_points[idx],coord_logR,coord_theta,coord_phi,nlblks,0)
+		temp,idx_flicks,block_found=rk4_velocity_trace_flicks(np.array([R_points[idx],theta_points[idx],phi_points[idx]]),coord_logR,coord_theta,coord_phi,v_flicks,dt,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks,solar_Radius)
+		if block_found:
+			R_new[idx]=temp[0]
+			theta_new[idx]=temp[1]
+			phi_new[idx]=temp[2]
+		else:
+			R_new[idx]=R_points[idx]
+			theta_new[idx]=theta_points[idx]
+			phi_new[idx]=phi_points[idx]
+	return R_new,theta_new,phi_new
+
+
+def parse_trajectories_file(infile_path):
+	filesize=os.path.getsize(infile_path)
+	infile=open(infile_path,"rb")
+	num_particles=struct.unpack("i",infile.read(4))[0]
+	num_times=int(np.floor((filesize-4)/(12*num_particles+4)))
+	times=np.zeros((num_times),dtype='float32')
+	trajectories=np.zeros((3,num_particles,num_times),dtype='float32')
+	for idx_t in range(num_times):
+		times[idx_t]=struct.unpack("f",infile.read(4))[0]
+		for idx_p in range(num_particles):
+			temp=struct.unpack("fff",infile.read(12))
+			trajectories[0,idx_p,idx_t]=temp[0]
+			trajectories[1,idx_p,idx_t]=temp[1]
+			trajectories[2,idx_p,idx_t]=temp[2]
+	return times,trajectories
 
 
 def parse_QSL_folder(folder_path):
