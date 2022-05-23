@@ -1,4 +1,9 @@
 
+"""
+Get the time shapes of surface flows in control file
+Specify indices of flows in target_profile_idx
+"""
+
 
 target_profile_idx=[0,1,2]	#must be list
 base_directory="./"

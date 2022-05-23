@@ -1,4 +1,8 @@
 
+"""
+Calculate size of spherical flicks grid block in Megameters
+Select target location below
+"""
 
 solar_Radius=1.0*7E10
 target_R=1.01
@@ -10,7 +14,7 @@ flicks_file="flicks.0000000"
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ASOT_Functions_Python import *
+from ARMS_ASOT_Functions import *
 
 
 def is_block_in_limits(coord_logR,coord_theta,coord_phi,target_R,target_theta,target_phi):
@@ -21,7 +25,7 @@ def is_block_in_limits(coord_logR,coord_theta,coord_phi,target_R,target_theta,ta
 	th_high=max(coord_theta)
 	ph_low=min(coord_phi)
 	ph_high=max(coord_phi)
-	if R_low<=target_R and R_high>=target_R and th_low<=target_theta/180.0*np.pi and th_high>=target_theta/180.0*np.pi and ph_low<=target_phi/180.0*np.pi and ph_high>=target_phi/180.0*np.pi:
+	if R_low<=target_R and R_high>=target_R and th_low<=target_theta*DEG2RAD and th_high>=target_theta*DEG2RAD and ph_low<=target_phi*DEG2RAD and ph_high>=target_phi*DEG2RAD:
 		in_limits=True
 	return in_limits
 

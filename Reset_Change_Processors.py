@@ -1,4 +1,8 @@
 
+"""
+For a complete set of ARMS reset files inside folder_path, create new set for arbitrary new number of processors
+Note that block packing is not efficient, so may be sub-optimal when running, but no equivalent routine exists... \o/ 
+"""
 
 new_processors=64
 folder_path="./PDMP_drestarted"

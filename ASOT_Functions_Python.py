@@ -1,4 +1,12 @@
+"""
+Basic functions for reading and basic processing of ARMS data
 
+Spherical coordinate definitions:
+'polar' - textbook definition: theta in [0,pi) | theta=0 is north pole | phi in [-pi,pi)  
+'control' - from arms.cnt: theta in [0,1) | theta=0 is north pole | phi in [-1,1)
+'carrington' - Mercator map on the sun: theta in [-90,90) | theta=90 is north pole | phi in [-180,180)
+'flicks' - as written to flicks files: theta in [-pi/2,pi/2) | theta=pi/2 is north pole | phi in [-pi,pi)
+"""
 
 import numpy as np
 import struct
@@ -8,8 +16,88 @@ import os
 DEG2RAD=np.pi/180.0
 RAD2DEG=180.0/np.pi
 
+
+def change_angular_coords(theta_in,phi_in,from_type=None,to_type=None):
+	"""
+	Supply input coordinates in float or numpy array and string for input/output type
+	"""
+	if from_type==None or to_type==None or type(from_type)!=str or type(to_type)!=str:
+		print("Error, specify input/output coordinates. Choices: 'polar','control','carrington','flicks'")
+		return theta_in,phi_in
+	elif from_type.lower()==to_type.lower():
+		return theta_in,phi_in
+	elif from_type.lower()=='polar':
+		if to_type.lower()=='control':
+			theta_out=theta_in/np.pi
+			phi_out=phi_in/np.pi
+		elif to_type.lower()=='carrington':
+			theta_out=90.0-theta_in*RAD2DEG
+			phi_out=phi_in*RAD2DEG
+		elif to_type.lower()=='flicks':
+			theta_out=np.pi*0.5-theta_in
+			phi_out=phi_in
+		else:
+			print("Error, output coordinate type not recognized. Choices: 'polar','control','carrington','flicks'")
+			theta_out=theta_in
+			phi_out=phi_in
+		return theta_out,phi_out
+	elif from_type.lower()=='control':
+		if to_type.lower()=='polar':
+			theta_out=np.pi*theta_in
+			phi_out=np.pi*phi_in
+		elif to_type.lower()=='carrington':
+			theta_out=180.0*(0.5-theta_in)
+			phi_out=180.0*phi_in
+		elif to_type.lower()=='flicks':
+			theta_out=np.pi*(0.5-theta_in)
+			phi_out=np.pi*phi_in
+		else:
+			print("Error, output coordinate type not recognized. Choices: 'polar','control','carrington','flicks'")
+			theta_out=theta_in
+			phi_out=phi_in
+		return theta_out,phi_out
+	elif from_type.lower()=='carrington':
+		if to_type.lower()=='polar':
+			theta_out=np.pi*(0.5-theta_in/180.0)
+			phi_out=DEG2RAD*phi_in
+		elif to_type.lower()=='control':
+			theta_out=0.5-theta_in/180.0
+			phi_out=phi_in/180.0
+		elif to_type.lower()=='flicks':
+			theta_out=DEG2RAD*theta_in
+			phi_out=DEG2RAD*phi_in
+		else:
+			print("Error, output coordinate type not recognized. Choices: 'polar','control','carrington','flicks'")
+			theta_out=theta_in
+			phi_out=phi_in
+		return theta_out,phi_out
+	elif from_type.lower()=='flicks':
+		if to_type.lower()=='polar':
+			theta_out=0.5-theta_in
+			phi_out=phi_in
+		elif to_type.lower()=='control':
+			theta_out=0.5-theta_in/np.pi
+			phi_out=phi_in/np.pi
+		elif to_type.lower()=='carrington':
+			theta_out=RAD2DEG*theta_in
+			phi_out=RAD2DEG*phi_in
+		else:
+			print("Error, output coordinate type not recognized. Choices: 'polar','control','carrington','flicks'")
+			theta_out=theta_in
+			phi_out=phi_in
+		return theta_out,phi_out
+	else:
+		print("Error, input coordinate type not recognized. Choices: 'polar','control','carrington','flicks'")
+		return theta_in,phi_in
+
+
 #Change flicks theta in [-pi/2,pi/2] --> [0,pi]
 def read_flicks_file(file_directory,flicks_file):
+	"""
+	Requires header file in directory and selected flicks file
+	nlblks - number of leaf blocks
+	Outputs arrays of block coordinates (each one a pair of upper/lower limits) for leaf blocks and data at all stored grid points
+	"""
 	#Read header file
 	hdrfile=open(os.path.join(file_directory,"flicks.hdr"),"r")
 	for idx in range(2):
@@ -78,6 +166,9 @@ def read_flicks_file(file_directory,flicks_file):
 
 
 def get_flicks_time(flicks_file):
+	"""
+	Simulation time from flicks file
+	"""
 	flicksfile=open(flicks_file,"rb")
 	flicksfile.read(25)
 	time=struct.unpack('>f', flicksfile.read(4))[0]
@@ -86,6 +177,10 @@ def get_flicks_time(flicks_file):
 
 
 def get_flicks_grid_dimensions(data):
+	"""
+	Dimensions from a data array read in from flicks or bfield
+	for bfield nvar==3
+	"""
 	nlblk=np.shape(data)[0]
 	n1p=np.shape(data)[3]
 	n2p=np.shape(data)[2]
@@ -95,6 +190,11 @@ def get_flicks_grid_dimensions(data):
 
 
 def read_bfield_file(file_directory,bfield_file):
+	"""
+	Requires header file in directory and selected bfield file
+	nlblks - number of leaf blocks
+	Outputs arrays of block coordinates (each one a pair of upper/lower limits) for leaf blocks and data at all stored grid points
+	"""
 	#Read header file
 	hdrfile=open(os.path.join(file_directory,"bfield.hdr"),"r")
 	hdrfile.readline()
@@ -147,17 +247,92 @@ def read_bfield_file(file_directory,bfield_file):
 	return time,ntblks,nlblks,coord_logR,coord_theta,coord_phi,data
 
 
+def is_block_in_limits(coord_logR,coord_theta,coord_phi,target_phi,R_limits):
+	"""
+	Check if a block straddles a given target_phi
+	R_limits can be 2-element array or None 
+	"""
+	in_limits=False
+	if R_limits!=None:
+		if coord_phi[0]<=target_phi/180.0*np.pi and coord_phi[1]>=target_phi/180.0*np.pi and np.exp(coord_logR[1])<=R_limits[1] and np.exp(coord_logR[0])>=R_limits[0]:
+			in_limits=True
+	else:
+		if coord_phi[0]<=target_phi/180.0*np.pi and coord_phi[1]>=target_phi/180.0*np.pi:
+			in_limits=True
+	return in_limits
+
+
 def interp_pointpair(x,x0,x1,y0,y1):
+	"""
+	Linear interpolation
+	"""
 	if x0==x1:
 		return y0
 	else:
 		return y0+(x-x0)*(y1-y0)/(x1-x0)
 
 
-#Target angle in degrees
+def read_fcube_file(infile_name,data_indices='all'):
+	"""
+	fcube - flicks data interpolated to regular grid
+	data_indices must be a list or 'all'
+	data_indices corresponds to elements of flicks data, e.g. 0 is rho usually
+	"""
+	infile=open(infile_name,"rb")
+	n1p=struct.unpack('>i', infile.read(4))[0]
+	n2p=struct.unpack('>i', infile.read(4))[0]
+	n3p=struct.unpack('>i', infile.read(4))[0]
+	nvar=struct.unpack('>i', infile.read(4))[0]
+	if type(data_indices)==str:
+		if data_indices.lower()=='all':
+			data_indices_actual=list(range(nvar))
+		else:
+			data_indices_actual=[]
+	elif type(data_indices)==list:
+		data_indices_actual=[]
+		for idx in data_indices:
+			if type(idx)==int and idx<nvar:
+				data_indices_actual.append(idx)
+			elif type(idx)==float and int(idx)<nvar:
+				data_indices_actual.append(int(idx))
+	else:
+		data_indices_actual=[]
+	gridx=np.array(struct.unpack('>'+n1p*'f', infile.read(n1p*4)))
+	gridy=np.array(struct.unpack('>'+n2p*'f', infile.read(n2p*4)))
+	gridz=np.array(struct.unpack('>'+n3p*'f', infile.read(n3p*4)))
+	grid_data=np.zeros((n1p,n2p,n3p,len(data_indices_actual)),dtype=np.float32)
+	idx_v2=0
+	for idx_v in range(nvar):
+		for idx3 in range(n3p):
+			for idx2 in range(n2p):
+				data_raw=infile.read(n1p*4)
+				if idx_v in data_indices_actual:
+					grid_data[:,idx2,idx3,idx_v2]=struct.unpack('>'+n1p*'f',data_raw)
+		if idx_v in data_indices_actual:
+			idx_v2+=1
+	infile.close()
+	return gridx,gridy,gridz,grid_data
+
+
+def read_bcube_directory(target_directory,timestep):
+	"""
+	bcube - bfield data interpolated to regular grid
+	"""
+	coord_R=np.fromfile(os.path.join(target_directory,'xcoords'), dtype='>f8').astype('float64')
+	coord_th=np.fromfile(os.path.join(target_directory,'ycoords'), dtype='>f8').astype('float64')
+	coord_ph=np.fromfile(os.path.join(target_directory,'zcoords'), dtype='>f8').astype('float64')
+	bcube=np.fromfile(os.path.join(target_directory,"bcube."+str(timestep)), dtype='>f8').reshape((len(coord_R), len(coord_th), len(coord_ph), 3), order='F')
+	return coord_R,coord_th,coord_ph,bcube
+
+
 def phi_slice(target_phi,coord_logR,coord_theta,coord_phi,data):
+	"""
+	Get data in a single plane of given phi
+	target_phi must be in degrees, e.g. Carrington coordinates
+	Routine will find blocks which straddle target_phi and interpolate linearly
+	"""
 	nlblk,n1p,n2p,n3p,nvar=get_flicks_grid_dimensions(data)
-	target_phi_actual=target_phi*np.pi/180.0
+	target_phi_actual=target_phi*DEG2RAD
 	num_blocks=len(coord_phi[:,0])
 	bounding_lblk=[]
 	for idx in range(num_blocks):
@@ -187,8 +362,12 @@ def phi_slice(target_phi,coord_logR,coord_theta,coord_phi,data):
 	return new_logR,new_theta,new_data
 
 
-#Target in linear space (as opposed to logR)
 def R_slice(target_R,coord_logR,coord_theta,coord_phi,data):
+	"""
+	Get data in a single plane of given phi
+	target_R must be in linear space (as opposed to logR)
+	Routine will find blocks which straddle target_R and interpolate linearly
+	"""
 	nlblk,n1p,n2p,n3p,nvar=get_flicks_grid_dimensions(data)
 	target_logR_actual=np.log(target_R)
 	num_blocks=len(coord_logR[:,0])
@@ -220,9 +399,12 @@ def R_slice(target_R,coord_logR,coord_theta,coord_phi,data):
 	return new_theta,new_phi,new_data
 
 
-#Do not save the upper edge points (i.e. very highest r, theta, phi points)
-#Otherwise, the redundant points at the upper edge of every block, which overlap with other blocks, must not be included
 def get_full_unstructured_cart_grid_noedge(coord_logR,coord_theta,coord_phi,data):
+	"""
+	Returns all flicks data in a large, unstructured Cartesian grid, e.g. X[i],Y[i],Z[i],rho[i] for all grid points
+	Do not save the upper edge points (i.e. very highest r, theta, phi points)
+	Otherwise, the redundant points at the upper edge of every block, which overlap with other blocks, must not be included
+	"""
 	nlblk,n1p,n2p,n3p,nvar=get_flicks_grid_dimensions(data)
 	n1pm1=n1p-1
 	n2pm1=n2p-1
@@ -256,6 +438,10 @@ def get_full_unstructured_cart_grid_noedge(coord_logR,coord_theta,coord_phi,data
 
 
 def get_min_sep_sph_grid_noedge(coord_logR,coord_theta,coord_phi,data):
+	"""
+	Not finished
+	Get regular rho grid using Python routines
+	"""
 	nlblk,n1p,n2p,n3p,nvar=get_flicks_grid_dimensions(data)
 	n1pm1=n1p-1
 	n2pm1=n2p-1
@@ -304,10 +490,12 @@ def get_min_sep_sph_grid_noedge(coord_logR,coord_theta,coord_phi,data):
 	return grid_logR3,grid_theta3,grid_phi3,logRho_grid
 
 
-#Must be a cuboid
-#f000=f(x0,y0,z0)
-#f100=f(x1,y0,z0) etc
 def Trilinear_interpolation(x,y,z,x0,x1,y0,y1,z0,z1,f000,f001,f010,f011,f100,f101,f110,f111):
+	"""
+	Must be a cuboid
+	f000=f(x0,y0,z0)
+	f100=f(x1,y0,z0) etc
+	"""
 	x_shift=x-x0
 	y_shift=y-y0
 	z_shift=z-z0
@@ -324,8 +512,11 @@ def Trilinear_interpolation(x,y,z,x0,x1,y0,y1,z0,z1,f000,f001,f010,f011,f100,f10
 	return f000+a1*x_shift+a2*y_shift+a3*z_shift+a4*x_shift*y_shift+a5*x_shift*z_shift+a6*y_shift*z_shift+a7*x_shift*y_shift*z_shift
 
 
-#Assumes array arr is monotonically increasing
 def ref_idx_search(arr,target_value,prev_idx):
+	"""
+	Find index of value in array
+	Assumes array arr is monotonically increasing
+	"""
 	idx=prev_idx
 	if arr[idx]<=target_value:
 		while idx<len(arr)-2 and arr[idx+1]<=target_value:
@@ -337,6 +528,10 @@ def ref_idx_search(arr,target_value,prev_idx):
 
 
 def o1_field_trace(pos_in,X,Y,Z,B,dt):
+	"""
+	First order field line integration, Cartesian coordinates
+	Probably doesn't work
+	"""
 
 	delta_X=X[1]-X[0]
 	delta_Y=Y[1]-Y[0]
@@ -354,6 +549,9 @@ def o1_field_trace(pos_in,X,Y,Z,B,dt):
 
 
 def rk4_field_trace_cartesian(pos_in,X,Y,Z,B,dt):
+	"""
+	RK4 field line integration, Cartesian coordinates
+	"""
 
 	delta_X=X[1]-X[0]
 	delta_Y=Y[1]-Y[0]
@@ -399,6 +597,11 @@ def rk4_field_trace_cartesian(pos_in,X,Y,Z,B,dt):
 
 
 def rk4_field_trace_spherical(pos_in,R,theta,phi,B,dt,idx_r_p,idx_t_p,idx_p_p):
+	"""
+	RK4 field line integration, spherical coordinates, 'polar' coordinate system
+	Currently sub-optimal due to switching back and forth to Cartesian coordinates
+	TODO - fully spherical
+	"""
 
 	r_0=pos_in[0]
 	t_0=pos_in[1]
@@ -495,6 +698,9 @@ def rk4_field_trace_spherical(pos_in,R,theta,phi,B,dt,idx_r_p,idx_t_p,idx_p_p):
 
 
 def find_flicks_idx(new_logR,new_theta,new_phi,coord_logR,coord_theta,coord_phi,nlblks,idx_flicks):
+	"""
+	Find index of block in ARMS grid, use previous index as start
+	"""
 	def coord_bounded(x,x1,x2):
 		if x<=x1 and x>=x2:
 			return True
@@ -516,7 +722,11 @@ def find_flicks_idx(new_logR,new_theta,new_phi,coord_logR,coord_theta,coord_phi,
 
 
 def rk4_field_trace_flicks(pos_in,coord_logR,coord_theta,coord_phi,B_flicks,dt,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks):
-
+	"""
+	RK4 field line integration, flicks grid
+	Currently sub-optimal due to switching back and forth to Cartesian coordinates
+	TODO - fully spherical
+	"""
 	r_0=pos_in[0]
 	log_r_0=np.log(r_0)
 	t_0=pos_in[1]
@@ -686,7 +896,11 @@ def rk4_field_trace_flicks(pos_in,coord_logR,coord_theta,coord_phi,B_flicks,dt,n
 
 
 def rk4_velocity_trace_flicks(pos_in,coord_logR,coord_theta,coord_phi,v_flicks,dt,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks,solar_Radius):
-
+	"""
+	Advect passive particle in flicks velocity grid (streamline)
+	Currently sub-optimal due to switching back and forth to Cartesian coordinates
+	TODO - fully spherical
+	"""
 	r_0=pos_in[0]
 	log_r_0=np.log(r_0)
 	t_0=pos_in[1]
@@ -853,6 +1067,9 @@ def rk4_velocity_trace_flicks(pos_in,coord_logR,coord_theta,coord_phi,v_flicks,d
 
 
 def field_line_cartesian(position0,X,Y,Z,B,R_min,R_max,max_steps=1E6,step_size=1E-2):
+	"""
+	Obtain back-and-forth field line, regular Cartesian coordinates
+	"""
 	max_steps=int(max_steps)
 	R2_min=R_min*R_min
 	R2_max=R_max*R_max
@@ -884,6 +1101,9 @@ def field_line_cartesian(position0,X,Y,Z,B,R_min,R_max,max_steps=1E6,step_size=1
 
 
 def field_line_spherical(position0,R,theta,phi,B,R_min,R_max,max_steps=1E6,step_size=1E-2):
+	"""
+	Obtain back-and-forth field line, regular spherical coordinates, 'polar' coordinate system
+	"""
 	max_steps=int(max_steps)
 	backward_temp=np.zeros((max_steps,3))
 	backward_temp[0,:]=position0
@@ -912,6 +1132,9 @@ def field_line_spherical(position0,R,theta,phi,B,R_min,R_max,max_steps=1E6,step_
 
 
 def field_line_flicks(position0,coord_logR,coord_theta,coord_phi,B_flicks,R_min,R_max,nlblks,n1pm1,n2pm1,n3pm1,max_steps=1E6,step_size=1E-2):
+	"""
+	Obtain back-and-forth field line, flicks grid
+	"""
 	max_steps=int(max_steps)
 	backward_temp=np.zeros((max_steps,3))
 	backward_temp[0,:]=position0
@@ -947,6 +1170,10 @@ def field_line_flicks(position0,coord_logR,coord_theta,coord_phi,B_flicks,R_min,
 
 #Assume data_flicks is a scalar field with the same format as B_flicks
 def data_along_field_line_flicks(position0,coord_logR,coord_theta,coord_phi,B_flicks,data_flicks,R_min,R_max,nlblks,n1pm1,n2pm1,n3pm1,max_steps=1E6,step_size=1E-2):
+	"""
+	Obtain back-and-forth field line, flicks grid
+	Also returns interpolated flicks data
+	"""
 	max_steps=int(max_steps)
 	shape_data=len(data_flicks[0,0,0,0,:])
 	backward_temp=np.zeros((max_steps,3+shape_data))
@@ -1047,6 +1274,9 @@ def data_along_field_line_flicks(position0,coord_logR,coord_theta,coord_phi,B_fl
 
 
 def particle_advance_flicks(num_points,R_points,theta_points,phi_points,coord_logR,coord_theta,coord_phi,v_flicks,dt,nlblks,n1pm1,n2pm1,n3pm1,solar_Radius):
+	"""
+	Obtain passive particle trajectory from flicks file
+	"""
 	R_new=np.zeros((num_points))
 	theta_new=np.zeros((num_points))
 	phi_new=np.zeros((num_points))
@@ -1065,6 +1295,9 @@ def particle_advance_flicks(num_points,R_points,theta_points,phi_points,coord_lo
 
 
 def parse_trajectories_file(infile_path):
+	"""
+	Saved passive particle trajectories
+	"""
 	filesize=os.path.getsize(infile_path)
 	infile=open(infile_path,"rb")
 	num_particles=struct.unpack("i",infile.read(4))[0]
@@ -1082,6 +1315,9 @@ def parse_trajectories_file(infile_path):
 
 
 def parse_QSL_folder(folder_path):
+	"""
+	Load in regular grid and B field from folder from QSLsquasher run
+	"""
 	dims_file=open(os.path.join(folder_path,"dim.txt"),"r")
 	X_dim=int(dims_file.readline())
 	Y_dim=int(dims_file.readline())
@@ -1116,6 +1352,10 @@ def parse_QSL_folder(folder_path):
 
 
 def parse_QSL_Rbinfile(filename):
+	"""
+	Load in QSL output file
+	Note - uses special version of QSLsquasher adapted to output binary data
+	"""
 	filesize=os.path.getsize(filename)
 	num_points=filesize//(28)
 	infile=open(filename,"rb")
@@ -1150,6 +1390,10 @@ def parse_QSL_Rbinfile(filename):
 
 
 def parse_QSL_RbinfileExpansion(filename):
+	"""
+	Load in QSL output file with expansion factor calculation
+	Note - uses special version of QSLsquasher adapted to output binary data
+	"""
 	filesize=os.path.getsize(filename)
 	num_points=filesize//(44)
 	infile=open(filename,"rb")
@@ -1195,6 +1439,9 @@ def linear_interpolation_2pt(x0,y0,x1,y1,x_t):
 
 
 def get_Polarity_Inversion_Line(phi,theta,B):
+	"""
+	Get line where B=0, assuming single solution exists for every phi
+	"""
 	phi_PIL=phi[:]
 	theta_PIL=np.zeros((len(phi_PIL)))
 	size_t=len(B[:,0])
@@ -1216,14 +1463,16 @@ def quadratic_minimum(a,b,c):
 	return -0.5*b/a
 
 
-#CGS
-def v_Alfven(B,rho,mu=1.0):
+def v_Alfven(B,rho,mu=1.0): #CGS
 	return 2.18E11*B/np.sqrt(rho*mu)
-mass_Hydrogen_grams=1.673E-24
+mass_Hydrogen_grams=1.673E-24 #CGS
 
-#CGS
-#angle_rads = angle between B and k in radians
-def v_magnetosonic(B,rho,T_e,angle_rads,bool_fast=True,mu=1.0,Z=1.0):
+
+def v_magnetosonic(B,rho,T_e,angle_rads,bool_fast=True,mu=1.0,Z=1.0): #CGS
+	"""
+	Fast/slow magnetosonic wave
+	angle_rads = angle between B and k in radians
+	"""
 	gamma=5.0/3.0
 	c_s=9.79E5*np.sqrt(gamma*Z*T_e/mu)
 	v_A=v_Alfven(B,rho,mu=mu)
@@ -1235,8 +1484,11 @@ def v_magnetosonic(B,rho,T_e,angle_rads,bool_fast=True,mu=1.0,Z=1.0):
 	return np.sqrt(v_ms2)
 
 
-#Read in surface flow parameters from control file
 def parse_sflow_CNT(cnt_file_path):
+	"""
+	Read in surface flow parameters from control file
+	Not all options implemented yet
+	"""
 	if os.path.isfile(cnt_file_path):
 		Time_profiles=[]	#0 - uniform, 1 - linear, 2 - "cos", 3 - sin
 		parameters=[]
@@ -1314,8 +1566,11 @@ def ARMS_DGauss(x,x_c,c):
 	return -2.0*c*(x-x_c)*np.exp(-c*(x-x_c)*(x-x_c))
 
 
-#ARMS coordinates
 def surface_move_rk_4(R,theta,phi,t,delta_t,Time_profiles,sflow_parameters):
+	"""
+	Advect point on photosphere according to ARMS flow profiles
+	ARMS coordinates
+	"""
 	k_1_th=0.0
 	k_1_ph=0.0
 	for idx_prof in range(len(sflow_parameters[:,0])):
@@ -1498,6 +1753,10 @@ def swap_two_angles(theta1,theta2):
 
 
 def categorize_reconnected(CNT_file,start_file,end_file,start_time,end_time,delta_t,solar_Radius):
+	"""
+	Categorize connectivity - open/closed and reconnected/not
+	TODO: adjust for R!=1.0
+	"""
 	from scipy.interpolate import interp1d
 	Time_profiles,sflow_parameters=parse_sflow_CNT(CNT_file)
 	sfl2l=[]
@@ -1573,6 +1832,9 @@ def categorize_reconnected(CNT_file,start_file,end_file,start_time,end_time,delt
 
 
 def save_connection_map(connection_filename,CNT_file,start_file,end_file,start_time,end_time,delta_t,solar_Radius):
+	"""
+	Calculate and store connectivity map
+	"""
 	R_st,theta_grid_st,phi_grid_st,Q_st,Q_end,connection_map=categorize_reconnected(CNT_file,start_file,end_file,start_time,end_time,delta_t,solar_Radius)
 	connection_map=np.array(connection_map,dtype=np.int32)
 	len_p=len(connection_map[:,0])
@@ -1581,24 +1843,36 @@ def save_connection_map(connection_filename,CNT_file,start_file,end_file,start_t
 	outfile.write(struct.pack('i',len_p))
 	outfile.write(struct.pack('i',len_t))
 	for idx_p in range(len_p):
+		outfile.write(struct.pack('f',phi_grid_st[idx_p,0]))
+	for idx_t in range(len_t):
+		outfile.write(struct.pack('f',theta_grid_st[0,idx_t]))
+	for idx_p in range(len_p):
 		outfile.write(bytes(connection_map[idx_p,:]))
 	outfile.close()
 
 
-def load_connection_map(start_file,end_file,connection_filename):
-	R_st,theta_grid_st,phi_grid_st,Q_st=parse_QSL_Rbinfile(start_file)
-	R_end,theta_grid_end,phi_grid_end,Q_end=parse_QSL_Rbinfile(end_file)
+def load_connection_map(connection_filename):
 	infile=open(connection_filename,"rb")
 	len_p=struct.unpack('i',infile.read(4))[0]
 	len_t=struct.unpack('i',infile.read(4))[0]
-	connection_map=np.zeros((len_p,len_t))
+	phi_grid=np.zeros((len_p))
+	theta_grid=np.zeros((len_t))
+	connection_map=np.zeros((len_p,len_t),dtype=np.int32)
+	for idx_p in range(len_p):
+		phi_grid[idx_p]=struct.unpack('f',infile.read(4))[0]
+	for idx_t in range(len_t):
+		theta_grid[idx_t]=struct.unpack('f',infile.read(4))[0]
+	theta_grid,phi_grid=np.meshgrid(theta_grid,phi_grid)
 	for idx_p in range(len_p):
 		connection_map[idx_p,:]=np.array(struct.unpack('i'*len_t,infile.read(4*len_t)))
 	infile.close()
-	return R_st,theta_grid_st,phi_grid_st,Q_st,Q_end,connection_map
+	return theta_grid,phi_grid,connection_map
 
 
 def surfaceline_smooth_curve(line_points):
+	"""
+	Smooth otherwise blocky open/closed contour using interpolation
+	"""
 	num_pts=len(line_points[0,:])
 	idx1=0
 	while idx1<num_pts-1:
@@ -1628,6 +1902,9 @@ def surfaceline_smooth_curve(line_points):
 
 
 def surfaceline_smooth_Npt(line_points,N):
+	"""
+	Smooth otherwise blocky open/closed contour by N-point averaging
+	"""
 	num_pts=len(line_points[0,:])
 	line_points_out=np.copy(line_points)
 	if N%2==0:
@@ -1639,6 +1916,9 @@ def surfaceline_smooth_Npt(line_points,N):
 
 
 def surfaceline_inside_region(point_phi,point_theta,num_regions,region_phi,region_theta):
+	"""
+	Return index of point inside given region
+	"""
 	inside_region=False
 	for idx in range(num_regions):
 		if point_phi>=region_phi[idx][0] and point_phi<=region_phi[idx][1] and point_theta>=region_theta[idx][0] and point_theta<=region_theta[idx][1]:
@@ -1672,8 +1952,12 @@ def surfaceline_print_cage(line_cage,num_cage,label,num_cols=3):
 		print("")
 
 
-#static_cages, dynamic_cages are lists of numpy arrays
 def surfaceline_write_binary_cage(outfilename,static_cages,dynamic_cages):
+	"""
+	Write open/closed boundary points, "cages" to file
+	static_cages, dynamic_cages are lists of numpy arrays
+	dynamic_cages will be advected by surface flows, static_cages are assumed not to move
+	"""
 	outfile=open(outfilename,"wb")
 	outfile.write(struct.pack('i',len(static_cages)))
 	for idx in range(len(static_cages)):
@@ -1695,6 +1979,11 @@ def surfaceline_write_binary_cage(outfilename,static_cages,dynamic_cages):
 
 
 def surfaceline_read_binary_cage(infilename):
+	"""
+	Read open/closed boundary points, "cages" to file
+	static_cages, dynamic_cages are lists of numpy arrays
+	dynamic_cages will be advected by surface flows, static_cages are assumed not to move
+	"""
 	infile=open(infilename,"rb")
 	static_cages=[]
 	num_static_cage=struct.unpack('i',infile.read(4))[0]
@@ -1721,6 +2010,9 @@ def surfaceline_read_binary_cage(infilename):
 
 
 def surfaceline_advance_cage(cage_in,start_t,plot_t,delta_t,CNT_file,solar_Radius):
+	"""
+	Advect open/closed boundary points, "cages", by surface flows
+	"""
 	Time_profiles,sflow_parameters=parse_sflow_CNT(CNT_file)
 	end_t=plot_t[-1]
 	cage=np.zeros((np.shape(cage_in)[0],np.shape(cage_in)[1]))
@@ -1750,6 +2042,10 @@ def surfaceline_advance_cage(cage_in,start_t,plot_t,delta_t,CNT_file,solar_Radiu
 
 
 def read_fieldline_file(target_file):
+	"""
+	Read output of ARMS fieldline integrator
+	Note: fieldline routine has been modified output binary data
+	"""
 	infile=open(target_file,"rb")
 	is_spherical=struct.unpack('>i',infile.read(4))[0]
 	x_periodic,y_periodic,z_periodic=struct.unpack('>iii',infile.read(12))
@@ -1792,7 +2088,7 @@ def read_fieldline_file(target_file):
 	if data_available:
 		B_ends=np.array(struct.unpack('>'+'d'*(nn1+1)*(nn2+1)*6,infile.read(8*(nn1+1)*(nn2+1)*6))).reshape(nn1+1,nn2+1,2,3)
 		if fieldlines_saved:
-			flines=np.array(struct.unpack('>'+'d'*(nn1+1)*(nn2+1)*nsteps*3,infile.read(8*(nn1+1)*(nn2+1)*nsteps*3))).reshape(nn1+1,nn2+1,nsteps,3)
+			flines=np.array(struct.unpack('>'+'d'*(nn1+1)*(nn2+1)*(nsteps*2-1)*3,infile.read(8*(nn1+1)*(nn2+1)*(nsteps*2-1)*3))).reshape(nn1+1,nn2+1,(nsteps*2-1),3)
 		else:
 			flines=np.zeros((1,1,1,3))
 		mapping=np.array(struct.unpack('>'+'d'*(nn1+1)*(nn2+1)*6,infile.read(8*(nn1+1)*(nn2+1)*6))).reshape(nn1+1,nn2+1,2,3)
@@ -1810,11 +2106,441 @@ def read_fieldline_file(target_file):
 
 
 def fieldlines_to_QSL(in_filename,out_filename):
+	"""
+	Convert fieldline binary data to QSL binary format
+	Note: both programs have been altered
+	"""
 	R,theta,phi,B_ends,flines,mapping,Q=read_fieldline_file(in_filename)
 	outfile=open(out_filename,"wb")
 	for idx_p in range(len(phi)):
 		for idx_t in range(len(theta)):
 			outfile.write(struct.pack("=dddf",(phi[idx_p]+180.0)*DEG2RAD,theta[idx_t]*DEG2RAD,R,Q[idx_t,idx_p]))
 	outfile.close()
+
+
+def read_fieldline_ff_file(target_file):
+	"""
+	Read output of ARMS fieldline_ff integrator
+	ff == from file
+	Given that this does not use a regular grid, Q is not computed
+	"""
+	infile=open(target_file,"rb")
+	is_spherical=struct.unpack('>i',infile.read(4))[0]
+	x_periodic,y_periodic,z_periodic=struct.unpack('>iii',infile.read(12))
+	fieldlines_saved=struct.unpack('>i',infile.read(4))[0]
+	nsteps=struct.unpack('>i',infile.read(4))[0]
+	step_start,step_max,error_bound=struct.unpack('>ddd',infile.read(24))
+	turnmap=struct.unpack('>i',infile.read(4))[0]
+	nn_tot=struct.unpack('>i',infile.read(4))[0]
+	gridfl=np.array(struct.unpack('>'+'d'*nn_tot*3,infile.read(8*nn_tot*3))).reshape(nn_tot,3)
+	B_ends=np.array(struct.unpack('>'+'d'*nn_tot*6,infile.read(8*nn_tot*6))).reshape(nn_tot,2,3)
+	if fieldlines_saved:
+		flines=np.array(struct.unpack('>'+'d'*nn_tot*(nsteps*2-1)*3,infile.read(8*nn_tot*(nsteps*2-1)*3))).reshape(nn_tot,(nsteps*2-1),3)
+	else:
+		flines=np.zeros((1,1,3))
+	mapping=np.array(struct.unpack('>'+'d'*nn_tot*6,infile.read(8*nn_tot*6))).reshape(nn_tot,2,3)
+	infile.close()
+	return gridfl,B_ends,flines,mapping
+
+
+#Return possible processors and steps
+def get_probe_files(probe_directory):
+	probe_files = [f for f in os.listdir(probe_directory) if os.path.isfile(os.path.join(probe_directory, f)) and os.path.getsize(os.path.join(probe_directory, f))>0 and 'probe.' in f and len(f.split('.'))==3 and f.split('.')[1].isnumeric() and f.split('.')[2].isnumeric()]
+	probe_files.sort()
+	probe_procs=[]
+	probe_steps=[]
+	for idx in range(len(probe_files)):
+		if os.path.getsize(os.path.join(probe_directory,probe_files[idx]))>12:
+			proc=int(probe_files[idx].split('.')[1])
+			step=int(probe_files[idx].split('.')[2])
+			if proc not in probe_procs:
+				probe_procs.append(proc)
+			if step not in probe_steps:
+				probe_steps.append(step)
+	return probe_procs,probe_steps
+
+
+def get_probe_blocks(probe_directory,proc,step,ndim=3):
+	"""
+	probe version of ARMS: return data from selected grid points at every simulation timestep
+	Return available block numbers and coordinates for given processor/timestep
+	"""
+	filename=os.path.join(probe_directory,"probe."+"{:04d}".format(proc)+".{:07d}".format(step))
+	infile=open(filename,"rb")
+	infile.read(4)
+	num_blocks=struct.unpack('>i', infile.read(4))[0]
+	infile.read(4)
+	probe_blocks=np.zeros((num_blocks),dtype=np.int32)
+	bnd_box=np.zeros((num_blocks,2,ndim),dtype=np.float64)
+	for idx in range(num_blocks):
+		infile.read(4)
+		probe_blocks[idx]=struct.unpack('>i', infile.read(4))[0]
+		infile.read(4)
+		for j in range(ndim):
+			for i in range(2):
+				infile.read(4)
+				bnd_box[idx,i,j]=struct.unpack('>d', infile.read(8))[0]
+				infile.read(4)
+	infile.close()
+	return probe_blocks,bnd_box
+
+
+def get_probe_block_location(probe_directory,step,target_R,target_theta,target_phi,ndim=3):
+	"""
+	probe version of ARMS: return data from selected grid points at every simulation timestep
+	Return processor+block number bounding given point (if available)
+
+	target_R [Rsun]
+	target_theta [deg], -90->+90
+	target_phi [deg], -180->+180
+	"""
+	probe_files = [f for f in os.listdir(probe_directory) if os.path.isfile(os.path.join(probe_directory, f)) and os.path.getsize(os.path.join(probe_directory, f))>0 and 'probe.' in f and len(f.split('.'))==3 and f.split('.')[1].isnumeric() and f.split('.')[2].isnumeric()]
+	probe_files.sort()
+	block_found=False
+	target_proc=0
+	target_block=0
+	target_points=[0,0]
+	for idx in range(len(probe_files)):
+		if os.path.getsize(os.path.join(probe_directory,probe_files[idx]))>12:
+			proc_curr=int(probe_files[idx].split('.')[1])
+			step_curr=int(probe_files[idx].split('.')[2])
+			if step_curr==step:
+				probe_blocks,bnd_box=get_probe_blocks(probe_directory,proc_curr,step_curr,ndim=ndim)
+				bnd_box[:,:,0]=np.exp(bnd_box[:,:,0])
+				bnd_box[:,:,1]=(0.5-bnd_box[:,:,1])*180.0
+				bnd_box[:,:,2]=bnd_box[:,:,2]*180.0
+				for idx3 in range(len(bnd_box[:,0,0])):
+					if (bnd_box[idx3,0,0]>=target_R and bnd_box[idx3,1,0]<=target_R) or (bnd_box[idx3,0,0]<=target_R and bnd_box[idx3,1,0]>=target_R):
+						if (bnd_box[idx3,0,1]>=target_theta and bnd_box[idx3,1,1]<=target_theta) or (bnd_box[idx3,0,1]<=target_theta and bnd_box[idx3,1,1]>=target_theta):
+							if (bnd_box[idx3,0,2]>=target_phi and bnd_box[idx3,1,2]<=target_phi) or (bnd_box[idx3,0,2]<=target_phi and bnd_box[idx3,1,2]>=target_phi):
+								block_found=True
+								target_proc=proc_curr
+								target_block=probe_blocks[idx3]
+								n2pm1=8
+								n3pm1=8
+								target_points[0]=int(np.round((target_theta-bnd_box[idx3,0,1])*n2pm1/(bnd_box[idx3,1,1]-bnd_box[idx3,0,1])))
+								if target_points[0]==n2pm1:
+									target_points[0]=n2pm1-1
+								target_points[1]=int(np.round((target_phi-bnd_box[idx3,0,2])*n3pm1/(bnd_box[idx3,1,2]-bnd_box[idx3,0,2])))
+								if target_points[1]==n3pm1:
+									target_points[1]=n3pm1-1
+		if block_found:
+			break
+	return block_found,target_proc,target_block,target_points
+		
+
+def read_probe_file(probe_directory,proc,step,ndim=3):
+	"""
+	probe version of ARMS: return data from selected grid points at every simulation timestep
+
+	probe_data [(time step),(block index),(see below),(theta index),(phi index)]:
+	[:,:,0,:,:] ! Bx
+	[:,:,1,:,:] ! By
+	[:,:,2,:,:] ! Bz
+	[:,:,3,:,:] ! mass density
+	[:,:,4,:,:] ! x-momentum
+	[:,:,5,:,:] ! y-momentum
+	[:,:,6,:,:] ! z-momentum
+	[:,:,7,:,:] ! energy density
+
+	NOTE! Python vs Fortran indices!
+
+	Bounds:
+	bnd_box[ (Number of Blocks) , (Lower, upper bound) , (Dimension) ] - all blocks
+	Lower/upper:
+	bnd_box[:,0,:]<leaf_bnd_box[:,1,:] (Always)
+	bnd_box[:,:,0] ! r
+	bnd_box[:,:,1] ! theta
+	bnd_box[:,:,2] ! phi
+	NOTE! theta=[0,1] (reversed), phi=[-1,1]
+	"""
+
+	filename=os.path.join(probe_directory,"probe."+"{:04d}".format(proc)+".{:07d}".format(step))
+	filesize=os.path.getsize(filename)
+	#TODO - further checks if file is malformed
+	infile=open(filename,"rb")
+	infile.read(4)
+	num_blocks=struct.unpack('>i', infile.read(4))[0]
+	infile.read(4)
+	probe_blocks=np.zeros((num_blocks),dtype=np.int32)
+	bnd_box=np.zeros((num_blocks,2,ndim),dtype=np.float64)
+	for idx in range(num_blocks):
+		infile.read(4)
+		probe_blocks[idx]=struct.unpack('>i', infile.read(4))[0]
+		infile.read(4)
+		for j in range(ndim):
+			for i in range(2):
+				infile.read(4)
+				bnd_box[idx,i,j]=struct.unpack('>d', infile.read(8))[0]
+				infile.read(4)
+
+	num_steps=(filesize-12-108*num_blocks)//(16+num_blocks*4104)
+	probe_times=np.zeros((num_steps),dtype=np.float64)
+	probe_data=np.zeros((num_steps,num_blocks,8,8,8),dtype=np.float64)
+	for idx2 in range(num_steps):
+		infile.read(4)
+		probe_times[idx2]=struct.unpack('>d', infile.read(8))[0]
+		infile.read(4)
+		for idx in range(num_blocks):
+			infile.read(4)
+			data_temp=np.array(struct.unpack('>'+'d'*512, infile.read(4096)))
+			probe_data[idx2,idx,:,:,:]=data_temp.reshape((8,8,8))
+			infile.read(4)
+	infile.close()
+	return probe_blocks,probe_times,probe_data
+
+
+def read_probe_singleblock(probe_directory,proc,block,ndim=3):
+	"""
+	probe version of ARMS: return data from selected grid points at every simulation timestep
+	Routine extracts and stitches together all times of data for given processor+block number
+	"""
+	probe_files = [f for f in os.listdir(probe_directory) if os.path.isfile(os.path.join(probe_directory, f)) and os.path.getsize(os.path.join(probe_directory, f))>0 and 'probe.' in f and len(f.split('.'))==3 and f.split('.')[1].isnumeric() and f.split('.')[2].isnumeric()]
+	probe_files.sort()
+	probe_steps=[]
+	for idx in range(len(probe_files)):
+		if os.path.getsize(os.path.join(probe_directory,probe_files[idx]))>12:
+			proc_curr=int(probe_files[idx].split('.')[1])
+			step_curr=int(probe_files[idx].split('.')[2])
+			if proc_curr==proc:
+				probe_steps.append(step_curr)
+	if len(probe_steps)==0:
+		return np.zeros((1),dtype=np.float64),np.zeros((1,8,8,8),dtype=np.float64)	#No valid timesteps, return zeros
+	elif len(probe_steps)==1:
+		probe_blocks_curr,probe_times_curr,probe_data_curr=read_probe_file(probe_directory,proc,probe_steps[0],ndim=ndim)
+		if block in probe_blocks_curr:
+			idx2=np.where(probe_blocks_curr==block)[0][0]
+			return probe_times_curr,probe_data_curr[:,idx2,:,:,:]
+		else:
+			return np.zeros((1),dtype=np.float64),np.zeros((1,8,8,8),dtype=np.float64)	#Block cannot be found, return zeros
+	else:
+		probe_steps.sort()
+		times_list=[]
+		data_list=[]
+		for idx in range(len(probe_steps)):
+			probe_blocks_curr,probe_times_curr,probe_data_curr=read_probe_file(probe_directory,proc,probe_steps[idx],ndim=ndim)
+			if block in probe_blocks_curr:
+				idx2=np.where(probe_blocks_curr==block)[0][0]
+				times_list.append(probe_times_curr)
+				data_list.append(probe_data_curr[:,idx2,:,:,:])
+		if len(times_list)==0:
+			return np.zeros((1),dtype=np.float64),np.zeros((1,8,8,8),dtype=np.float64)	#Block cannot be found, return zeros
+		else:
+			timesteps_total=0
+			for idx in range(len(probe_steps)-1):
+				timesteps_total+=min(len(times_list[idx]),probe_steps[idx+1]-probe_steps[idx])
+			timesteps_total+=len(times_list[-1])
+			probe_times=np.zeros((timesteps_total),dtype=np.float64)
+			probe_data=np.zeros((timesteps_total,8,8,8),dtype=np.float64)
+			idx2=0
+			for idx in range(len(probe_steps)-1):
+				len_curr=min(len(times_list[idx]),probe_steps[idx+1]-probe_steps[idx])
+				probe_times[idx2:idx2+len_curr]=times_list[idx][:len_curr]
+				probe_data[idx2:idx2+len_curr,:,:,:]=data_list[idx][:len_curr,:,:,:]
+				idx2+=len_curr
+			probe_times[idx2:]=times_list[-1][:]
+			probe_data[idx2:,:,:,:]=data_list[-1][:,:,:,:]
+			return probe_times,probe_data
+
+
+def read_arms_prestart(folder_path,timestep,nfaces=6,nchild=8,ndim=3):
+	"""
+	Read parallel restart files in a folder; blocks will be padded with zeros
+	TODO for future: replace padding zeros with existing or interpolated data
+	
+	fvar1 (python indices):
+	[:,:,:,:,0] ! mass density
+	[:,:,:,:,1] ! x-momentum
+	[:,:,:,:,2] ! y-momentum
+	[:,:,:,:,3] ! z-momentum
+	[:,:,:,:,4] ! energy density
+	[:,:,:,:,5] ! pressure
+	[:,:,:,:,6] ! temperature
+
+	Bounds:
+	bnd_box[ (Number of Blocks) , (Lower, upper bound) , (Dimension) ] - all blocks
+	leaf_bnd_box[...] - just leaf blocks
+	Lower/upper:
+	leaf_bnd_box[:,0,:]<leaf_bnd_box[:,1,:] (Always)
+	leaf_bnd_box[:,:,0] ! r
+	leaf_bnd_box[:,:,1] ! theta
+	leaf_bnd_box[:,:,2] ! phi
+	NOTE! theta=[0,1] (reversed), phi=[-1,1]
+	"""
+
+	#Get list of files
+	timestep_str="{:07}".format(timestep)
+	rst_files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f)) and 'arms.rst.' in f and timestep_str in f]
+	rst_files.sort()
+
+	#Check processors are sequential
+	if len(rst_files)==0:
+		print("Error: no rst files found")
+		processors_consistent=False
+	elif len(rst_files)==1:
+		if int(rst_files[0].split(".")[2])==0:
+			processors_consistent=True
+		else:
+			print("Error: files missing")
+			processors_consistent=False
+	else:
+		if int(rst_files[0].split(".")[2])==0:
+			processors_consistent=True
+			for idx in range(1,len(rst_files)):
+				if int(rst_files[idx-1].split(".")[2])!=int(rst_files[idx].split(".")[2])-1:
+					processors_consistent=False
+			if not processors_consistent:
+				print("Error: files missing")
+		else:
+			print("Error: files missing")
+			processors_consistent=False
+	#################################
+
+	if processors_consistent:
+		#First pass: loop over files to check consistency, get total number of leaf blocks
+		lunkvar=np.zeros((len(rst_files)),dtype=np.int32)
+		lfacevar=np.zeros((len(rst_files)),dtype=np.int32)
+		lflags=np.zeros((len(rst_files)),dtype=np.int32)
+		time=np.zeros((len(rst_files)),dtype=np.float64)
+		deltat=np.zeros((len(rst_files)),dtype=np.float64)
+		jstep=np.zeros((len(rst_files)),dtype=np.int32)
+		nxb=np.zeros((len(rst_files)),dtype=np.int32)
+		nyb=np.zeros((len(rst_files)),dtype=np.int32)
+		nzb=np.zeros((len(rst_files)),dtype=np.int32)
+		lnblocks=np.zeros((len(rst_files)),dtype=np.int32)
+		num_leafblocks=0
+		for idx in range(len(rst_files)):
+			infile=open(os.path.join(folder_path,rst_files[idx]),"rb")
+
+			sdf_type=infile.read(4)
+			if sdf_type!=b'SDF1':
+				print("Warning: wrong SDF type, "+sdf_type)
+			lunkvar[idx]=struct.unpack('>i', infile.read(4))[0]
+			lfacevar[idx]=struct.unpack('>i', infile.read(4))[0]
+			lflags[idx]=struct.unpack('>i', infile.read(4))[0]
+			time[idx]=struct.unpack('>d', infile.read(8))[0]
+			deltat[idx]=struct.unpack('>d', infile.read(8))[0]
+			jstep[idx]=struct.unpack('>i', infile.read(4))[0]
+			nxb[idx]=struct.unpack('>i', infile.read(4))[0]
+			nyb[idx]=struct.unpack('>i', infile.read(4))[0]
+			nzb[idx]=struct.unpack('>i', infile.read(4))[0]
+			lnblocks[idx]=struct.unpack('>i', infile.read(4))[0]
+
+			for lb in range(lnblocks[idx]):
+				lrefine=struct.unpack('>i', infile.read(4))[0]
+				nodetype=struct.unpack('>i', infile.read(4))[0]
+				which_child=struct.unpack('>i', infile.read(4))[0]
+				infile.read(4)
+				infile.read(4)
+				infile.read(nfaces*2*4)
+				infile.read(nchild*2*4)
+				infile.read(lflags[idx]*4)
+				infile.read(ndim*2*8)
+				if nodetype==1:
+					num_leafblocks+=1
+					infile.read(lunkvar[idx]*nzb[idx]*nyb[idx]*nxb[idx]*8)
+					if lfacevar[idx]==1:
+						infile.read(nzb[idx]*nyb[idx]*(nxb[idx]+1)*8)
+						infile.read(nzb[idx]*(nyb[idx]+1)*nxb[idx]*8)
+						infile.read((nzb[idx]+1)*nyb[idx]*nxb[idx]*8)
+			infile.close()
+		field_output=False
+		files_consistent=True
+		for idx in range(1,len(rst_files)):
+			if lunkvar[idx-1]!=lunkvar[idx] or lfacevar[idx-1]!=lfacevar[idx] or lflags[idx-1]!=lflags[idx] or time[idx-1]!=time[idx] or deltat[idx-1]!=deltat[idx] or jstep[idx-1]!=jstep[idx] or nxb[idx-1]!=nxb[idx] or nyb[idx-1]!=nyb[idx] or nzb[idx-1]!=nzb[idx]:
+				files_consistent=False
+
+		if files_consistent:
+			if lfacevar[0]==1:
+				field_output=True
+
+			#Second pass: allocate arrays and loop over files to get data
+			n1=nxb[0]
+			n2=nyb[0]
+			n3=nzb[0]
+			n1p=n1+1
+			n2p=n2+1
+			n3p=n3+1
+			num_totalblocks=sum(lnblocks)
+			lblock_idx=np.zeros((len(rst_files),max(lnblocks)),dtype=np.int32)
+			lrefine=np.zeros((num_totalblocks),dtype=np.int32)
+			nodetype=np.zeros((num_totalblocks),dtype=np.int32)
+			which_child=np.zeros((num_totalblocks),dtype=np.int32)
+			parent=np.zeros((2,num_totalblocks),dtype=np.int32)
+			neigh=np.zeros((2,nfaces,num_totalblocks),dtype=np.int32)
+			leaf_neigh=np.zeros((2,nfaces,num_leafblocks),dtype=np.int32)
+			child=np.zeros((2,nchild,num_totalblocks),dtype=np.int32)
+			bflags=np.zeros((lflags[0],num_totalblocks),dtype=np.int32)
+			bnd_box=np.zeros((num_totalblocks,2,ndim),dtype=np.float64)
+			leaf_bnd_box=np.zeros((num_leafblocks,2,ndim),dtype=np.float64)
+			fvar1=np.zeros((num_leafblocks,n3p,n2p,n1p,lunkvar[0]),dtype=np.float64)
+			bvar=np.zeros((num_leafblocks,n3p,n2p,n1p,3),dtype=np.float64)
+			idx_block=0	#Normal block
+			idx_lblock=0	#Any leafblock
+			for idx in range(len(rst_files)):
+				infile=open(os.path.join(folder_path,rst_files[idx]),"rb")
+				infile.read(9*4+2*8)
+				for lb in range(lnblocks[idx]):
+					lrefine[idx_block]=struct.unpack('>i', infile.read(4))[0]
+					nodetype[idx_block]=struct.unpack('>i', infile.read(4))[0]
+					which_child[idx_block]=struct.unpack('>i', infile.read(4))[0]
+					parent[0,idx_block]=struct.unpack('>i', infile.read(4))[0]
+					parent[1,idx_block]=struct.unpack('>i', infile.read(4))[0]
+					for j in range(nfaces):
+						for i in range(2):
+							neigh[i,j,idx_block]=struct.unpack('>i', infile.read(4))[0]
+					for j in range(nchild):
+						for i in range(2):
+							child[i,j,idx_block]=struct.unpack('>i', infile.read(4))[0]
+					for i in range(lflags[0]):
+						bflags[i,idx_block]=struct.unpack('>i', infile.read(4))[0]
+					for j in range(ndim):
+						for i in range(2):
+							bnd_box[idx_block,i,j]=struct.unpack('>d', infile.read(8))[0]
+					if nodetype[idx_block]==1:
+						lblock_idx[idx,lb]=idx_lblock
+						leaf_neigh[:,:,idx_lblock]=neigh[:,:,idx_block]
+						leaf_bnd_box[idx_lblock,:,:]=bnd_box[idx_block,:,:]
+						for l in range(lunkvar[0]):
+							for k in range(n3):
+								for j in range(n2):
+									for i in range(n1):
+										fvar1[idx_lblock,k,j,i,l]=struct.unpack('>d', infile.read(8))[0]
+						if field_output:
+							for k in range(n3):
+								for j in range(n2):
+									for i in range(n1p):
+										bvar[idx_lblock,k,j,i,0]=struct.unpack('>d', infile.read(8))[0]
+							for k in range(n3):
+								for j in range(n2p):
+									for i in range(n1):
+										bvar[idx_lblock,k,j,i,1]=struct.unpack('>d', infile.read(8))[0]
+							for k in range(n3p):
+								for j in range(n2):
+									for i in range(n1):
+										bvar[idx_lblock,k,j,i,2]=struct.unpack('>d', infile.read(8))[0]
+						idx_lblock+=1
+					idx_block+=1
+				infile.close()
+			data_good=True
+		else: #not files_consistent
+			data_good=False
+			num_totalblocks=1
+			num_leafblocks=1
+			leaf_neigh=np.zeros((2,nfaces,num_leafblocks),dtype=np.int32)
+			leaf_bnd_box=leaf_bnd_box=np.zeros((num_leafblocks,2,ndim),dtype=np.float64)
+			fvar1=np.zeros((num_leafblocks,1,1,1,1),dtype=np.float64)
+			bvar=np.zeros((num_leafblocks,1,1,1,3),dtype=np.float64)
+	else: #not processors_consistent
+		data_good=False
+		num_totalblocks=1
+		num_leafblocks=1
+		leaf_neigh=np.zeros((2,nfaces,num_leafblocks),dtype=np.int32)
+		leaf_bnd_box=leaf_bnd_box=np.zeros((num_leafblocks,2,ndim),dtype=np.float64)
+		fvar1=np.zeros((num_leafblocks,1,1,1,1),dtype=np.float64)
+		bvar=np.zeros((num_leafblocks,1,1,1,3),dtype=np.float64)
+	return data_good,num_totalblocks,num_leafblocks,lblock_idx,leaf_neigh,leaf_bnd_box,fvar1,field_output,bvar
+
+
 
 

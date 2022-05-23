@@ -1,7 +1,12 @@
 
+"""
+Get times and timesteps from print files in a subdirectory
+Supply subdirectory as command line argument when running this, e.g.
+> python ParsePRT.py New_Run
+This will parse in /base_directory/New_Run
+"""
 
 base_directory="./"
-
 
 import os
 import sys
@@ -28,7 +33,7 @@ else:
 	bfield_steps.sort()
 
 	if len(flicks_steps)>0:
-		print(flicks_steps[0][0],flicks_steps[0][1])
+		print("0",flicks_steps[0][0],flicks_steps[0][1])
 		for idx in range(1,len(flicks_steps)):
 			if flicks_steps[idx][0]!=flicks_steps[idx-1][0]:
-				print(flicks_steps[idx][0],flicks_steps[idx][1])
+				print(idx,flicks_steps[idx][0],flicks_steps[idx][1])

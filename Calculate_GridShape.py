@@ -1,4 +1,8 @@
 
+"""
+Attempt to predict grid shape from variables in arms.cnt without running ARMS itself
+"""
+
 
 plot_defined_region=False #Red line showing defining regions
 target_R=1.0
@@ -7,7 +11,7 @@ target_phi=1.0
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ASOT_Functions_Python import *
+from ARMS_ASOT_Functions import *
 import matplotlib.pyplot as plt
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
@@ -25,13 +29,6 @@ refine_data=[[7.0e+10,  2.1e+11,    0.2,    +0.7,     -0.45,      0.5,        2]
    [7.0e+10, 7.026e+10, 0.4,    +0.5,      -0.15,      0.1,        5],
    [7.0e+10,  7.8e+10, 0.13,    +0.42,     -0.3,      0.4,       5],
    [7.8e+10,  1.0e+11, 0.15,    +0.4,     -0.3,      0.4,       5]]
-
-refine_data=[[7.0e+10,  2.1e+11,    0.2,    +0.7,     -0.45,      0.5,        2],
-   [7.0e+10,  9.1e+10,   0.15,    +0.35,    -0.25,      0.1,        4],
-   [7.0e+10,  9.1e+10,   0.15,    +0.4,       0.0,      0.4,        4],
-   [7.0e+10, 7.026e+10, 0.15,    +0.5,      -0.3,      0.1,        5],
-   [7.0e+10, 7.026e+10, 0.15,    +0.45,      0.0,      0.45,        5]]
-
 
 
 #Preliminaries
