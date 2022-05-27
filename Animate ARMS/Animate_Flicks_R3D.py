@@ -1,9 +1,17 @@
 
 
+"""
+Animate flicks data on successive concentric spheres, optionally with select fieldlines
+
+Requires ffmpeg; written for Linux machines (possibly MacOS), needs altering for Windows
+pad_start_frames and pad_end_frames will repeat first/last frames
+"""
+
+
 import numpy as np
 target_R=np.linspace(1.01,1.6,num=100)
 file_directory="./"
-flicks_file="flicks.0441995"
+flicks_file="flicks.0000000"
 
 frames_per_step=10
 frames_per_sec=20
@@ -27,14 +35,17 @@ def R_label_function(R):
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ASOT_Functions_Python import *
+from ARMS_ASOT_Functions import *
 from scipy.interpolate import griddata
 from mayavi import mlab
 from subprocess import call
 
 
-grid_theta=np.linspace(0.0,np.pi,num=400)
-grid_phi=np.linspace(-np.pi,np.pi,num=500)
+size_t_grid=400
+size_p_grid=500
+
+grid_theta=np.linspace(0.0,np.pi,num=size_t_grid)
+grid_phi=np.linspace(-np.pi,np.pi,num=size_p_grid)
 grid_theta,grid_phi=np.meshgrid(grid_theta,grid_phi)
 data_list=[]
 min_data=None
