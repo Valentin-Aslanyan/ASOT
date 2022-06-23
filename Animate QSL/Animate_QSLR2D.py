@@ -1,16 +1,21 @@
 
+"""
+Animate successive Q maps from QSLsquasher (modified version outputting binary data not included in this repository)
+
+Requires ffmpeg; written for Linux machines (possibly MacOS), needs altering for Windows
+pad_start_frames and pad_end_frames will repeat first/last frames
+"""
+
 
 filenames=[
-"./PFLS/0044295/qslR1.bin",
-"./PFLS/0059184/qslR1.bin",
-"./PFLS/0073595/qslR1.bin",
-"./PFLS/0096648/qslR1.bin",
-"./PFLS/0139195/qslR1.bin",
-"./PFLS/0189669/qslR1.bin",
-"./PFLS/0233915/qslR1.bin",
-"./PFLS/0284507/qslR1.bin",
-"./PFLS/0328754/qslR1.bin",
-"./PFLS/0379325/qslR1.bin"]
+"./0000000/qslR1.bin",
+"./0000001/qslR1.bin",
+"./0000002/qslR1.bin",
+"./0000003/qslR1.bin",
+"./0000004/qslR1.bin",
+"./0000005/qslR1.bin",
+"./0000006/qslR1.bin",
+"./0000007/qslR1.bin"]
 
 frames_per_step=4
 frames_per_sec=2
@@ -23,7 +28,7 @@ theta_limits=[100,150]	#
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ASOT_Functions_Python import *
+from ARMS_ASOT_Functions import *
 import matplotlib.pyplot as plt
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')

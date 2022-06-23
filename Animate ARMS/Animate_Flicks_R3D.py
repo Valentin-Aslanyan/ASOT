@@ -1,12 +1,10 @@
 
-
 """
 Animate flicks data on successive concentric spheres, optionally with select fieldlines
 
 Requires ffmpeg; written for Linux machines (possibly MacOS), needs altering for Windows
 pad_start_frames and pad_end_frames will repeat first/last frames
 """
-
 
 import numpy as np
 target_R=np.linspace(1.01,1.6,num=100)
@@ -18,10 +16,11 @@ frames_per_sec=20
 pad_start_frames=10
 pad_end_frames=10
 
+#Carrington coordinates
 plot_field_lines=True  
-R_start    =[+1.000,+1.000,+1.000,+1.000,+1.000,+1.000,+1.000,+1.000,+1.000,+1.000,+1.000,+1.000,+1.000,+1.000,+1.000,+1.000,+1.000]
-theta_start=[+2.510,+2.028,+2.064,+1.990,+1.961,+2.012,+1.927,+1.861,+2.181,+2.659,+2.689,+2.563,+2.532,+2.514,+2.427,+2.269,+2.002]
-phi_start  =[-0.811,+1.135,-0.282,-0.015,+0.216,-0.155,+0.425,+0.771,-0.517,-0.660,-0.153,+0.255,+0.401,+0.697,+0.968,+1.144,-0.162]
+R_start    =[ +1.000, +1.000, +1.000, +1.000, +1.000, +1.000, +1.000, +1.000, +1.000, +1.000, +1.000, +1.000, +1.000, +1.000, +1.000, +1.000, +1.000]
+theta_start=[+53.812,+26.196,+28.258,+24.019,+22.357,+25.279,+20.409,+16.627,+34.962,+62.349,+64.068,+56.849,+55.073,+54.042,+49.057,+40.004,+24.706]
+phi_start  =[-46.467,+65.031,-16.157, -0.859,+12.376, -8.881,+24.351,+44.175,-29.622,-37.815, -8.766,+14.610,+22.976,+39.935,+55.462,+65.546, -9.282]
 
 
 #Use this to define 2D data array desired: log(rho), B^2 etc...
@@ -63,7 +62,8 @@ if plot_field_lines:
 	field_line_Y=[]
 	field_line_Z=[]
 	for idx in range(min(len(R_start),len(theta_start),len(phi_start))):
-		field_line_start=np.array([R_start[idx],theta_start[idx],phi_start[idx]])
+		th_temp,ph_temp=change_angular_coords(theta_start[idx],phi_start[idx],from_type='carrington',to_type='flicks')
+		field_line_start=np.array([R_start[idx],th_temp+0.5*np.pi,ph_temp])
 		field_line_sph=field_line_flicks(field_line_start,coord_logR,coord_theta,coord_phi,B_flicks,1.0,2.9,nlblks,n1pm1,n2pm1,n3pm1,step_size=1E-2)
 		field_line_R.append(field_line_sph[:,0])
 		field_line_X.append(field_line_sph[:,0]*np.sin(field_line_sph[:,1])*np.cos(field_line_sph[:,2]))
