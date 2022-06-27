@@ -1,20 +1,23 @@
 
+"""
+Advect dynamic "cages" according to ideal surface flow velocity (defined in ARMS control file)
+"""
 
 CNT_file="./arms.cnt"
-SurfaceLine_initial="./SurfaceLineData/SLine_4000.bin"
-t_start=4000.0
+SurfaceLine_initial="./SurfaceLineData/SLine.bin"
+t_start=0.0
 delta_t=10.0
 solar_Radius=1.0*7E10
-plot_t=[4600.0,4800.0,5000.0,5200.0,5400.0,5600.0,5800.0,6000.0] #Make sure times are in order and correspond correctly to filenames
+plot_t=[1000.0,2000.0,3000.0,4000.0,5000.0,6000.0,7000.0,8000.0] #Make sure times are in order and correspond correctly to filenames
 SurfaceLine_outputs=[
-"./SurfaceLineData/SLine_4600.bin",
-"./SurfaceLineData/SLine_4800.bin",
+"./SurfaceLineData/SLine_1000.bin",
+"./SurfaceLineData/SLine_2000.bin",
+"./SurfaceLineData/SLine_3000.bin",
+"./SurfaceLineData/SLine_4000.bin",
 "./SurfaceLineData/SLine_5000.bin",
-"./SurfaceLineData/SLine_5200.bin",
-"./SurfaceLineData/SLine_5400.bin",
-"./SurfaceLineData/SLine_5600.bin",
-"./SurfaceLineData/SLine_5800.bin",
-"./SurfaceLineData/SLine_6000.bin"]
+"./SurfaceLineData/SLine_6000.bin",
+"./SurfaceLineData/SLine_7000.bin",
+"./SurfaceLineData/SLine_8000.bin"]
 
 
 import sys

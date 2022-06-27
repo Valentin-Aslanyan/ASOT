@@ -1,18 +1,19 @@
+
 """
+Create one or more "cage", points along the open/closed boundary (OCB)
 Split points along OCB into:
-"regions" = high density points where surface drive will occur
+"dynamic" = high density points where surface drive will occur, within region_phi and region_theta
 "static"  = low density points which will no drive will occur
 """
 
+filename="./PFLS/qslR1.qsl"
+binary_outfile="./SurfaceLineData/SLine.bin"
 
-filename="./PFLS/0044295/qslR1Fine.bin"
-binary_outfile="./SurfaceLineData/SLine_StaticStart.bin"
-
-num_per_region=200
+num_per_region=5000
 region_phi=[[-14.0,-2.0]]		#Make sure regions do not overlap
-region_theta=[[108.0,120.0]]
+region_theta=[]#[[108.0,120.0]]
 
-contour_bounds=[[-25.0,35.0],[90.0,120.0]]
+contour_bounds=[[-180.0,180.0],[20.0,160.0]]
 
 
 import sys
@@ -23,6 +24,11 @@ plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 from scipy.interpolate import interp1d
 
+for idx in range(len(region_theta)):
+	region_theta[idx][0]+=90.0
+	region_theta[idx][1]+=90.0
+contour_bounds[1][0]+=90.0
+contour_bounds[1][1]+=90.0
 
 R,theta,phi,Q=parse_QSL_Rbinfile(filename)
 Q_grid=np.log(abs(Q))
@@ -44,9 +50,9 @@ ax3=fig3.gca()
 plt.tight_layout()
 contour_found=False
 for idx in range(len(contour1.allsegs[0])):
-	if len(contour1.allsegs[0][idx])>10 and max(contour1.allsegs[0][idx][:,0])<contour_bounds[0][1]/180.0*np.pi and min(contour1.allsegs[0][idx][:,0])>contour_bounds[0][0]/180.0*np.pi and max(contour1.allsegs[0][idx][:,1])<contour_bounds[1][1]/180.0*np.pi and min(contour1.allsegs[0][idx][:,1])>contour_bounds[1][0]/180.0*np.pi:
+	if len(contour1.allsegs[0][idx])>300 and max(contour1.allsegs[0][idx][:,0])<contour_bounds[0][1]*DEG2RAD and min(contour1.allsegs[0][idx][:,0])>contour_bounds[0][0]*DEG2RAD and max(contour1.allsegs[0][idx][:,1])<contour_bounds[1][1]*DEG2RAD and min(contour1.allsegs[0][idx][:,1])>contour_bounds[1][0]*DEG2RAD:
 		contour_found=True
-		contour_raw=np.transpose(contour1.allsegs[0][idx])*180.0/np.pi
+		contour_raw=np.transpose(contour1.allsegs[0][idx])*RAD2DEG
 		plt.plot(contour_raw[0,:],contour_raw[1,:],color="black")
 		plt.plot([contour_raw[0,0]],[contour_raw[1,0]],'o',color="orange")
 		plt.plot([contour_raw[0,-1]],[contour_raw[1,-1]],'o',color="green")
@@ -74,7 +80,7 @@ if num_regions>0:
 		fig4=plt.figure("Final, single static contour",figsize=(8,8))
 		plt.plot(line_static[0,:],line_static[1,:],color="orange")
 		fig5=plt.figure("Final on Q map",figsize=(8,8))
-		color_plot3=plt.pcolormesh(phi/np.pi*180.0,theta/np.pi*180.0,Q_grid*Q_sign,cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
+		color_plot3=plt.pcolormesh(phi*RAD2DEG,theta*RAD2DEG,Q_grid*Q_sign,cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
 		plt.plot(line_static[0,:],line_static[1,:],color="orange")
 
 	#Only one region in contour
@@ -92,7 +98,7 @@ if num_regions>0:
 		fig4=plt.figure("Final, single region",figsize=(8,8))
 		plt.plot(line_region[0,:],line_region[1,:],color="black")
 		fig5=plt.figure("Final on Q map",figsize=(8,8))
-		color_plot3=plt.pcolormesh(phi/np.pi*180.0,theta/np.pi*180.0,Q_grid*Q_sign,cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
+		color_plot3=plt.pcolormesh(phi*RAD2DEG,theta*RAD2DEG,Q_grid*Q_sign,cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
 		plt.plot(line_region[0,:],line_region[1,:],color="black")
 
 	#One region + (other regions and/or static regions)
@@ -134,7 +140,7 @@ if num_regions>0:
 		for idx in range(len(line_static)):
 			plt.plot(line_static[idx][0,:],line_static[idx][1,:],color="orange")
 		fig5=plt.figure("Final on Q map",figsize=(8,8))
-		color_plot3=plt.pcolormesh(phi/np.pi*180.0,theta/np.pi*180.0,Q_grid*Q_sign,cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
+		color_plot3=plt.pcolormesh(phi*RAD2DEG,theta*RAD2DEG,Q_grid*Q_sign,cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
 		for idx in range(len(line_region)):
 			plt.plot(line_region[idx][0,:],line_region[idx][1,:],color="black")
 		for idx in range(len(line_static)):
@@ -148,7 +154,7 @@ else:
 	fig4=plt.figure("Final, single static contour",figsize=(8,8))
 	plt.plot(line_static[0,:],line_static[1,:],color="orange")
 	fig5=plt.figure("Final on Q map",figsize=(8,8))
-	color_plot3=plt.pcolormesh(phi/np.pi*180.0,theta/np.pi*180.0,Q_grid*Q_sign,cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
+	color_plot3=plt.pcolormesh(phi*RAD2DEG,theta*RAD2DEG,Q_grid*Q_sign,cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
 	plt.plot(line_static[0,:],line_static[1,:],color="orange")
 
 plt.show()
