@@ -1,17 +1,22 @@
 
+"""
+Display time-dependent map of |v| for surface flow vortices (directly from ARMS control file) relative to Open/Closed boundary (or other "cage", e.g. Polarity Inversion Line)
+"""
 
 t_start=0.0
-t_end=8000.0
+t_end=1000.0
 
-num_frames_QSL=200
 num_frames_v=240
-frames_per_sec=20
+frames_per_step=3
+frames_per_sec=10
+pad_start_frames=3
+pad_end_frames=3
 
 phi_limits=[-30,40]	#None for default
-theta_limits=[90,125]	#degrees
+theta_limits=[0,35]	#degrees
 
-CNT_file="./SHORT_arms.cnt"
-OCB_file="./PFLS/0044295/qslR1.bin"
+CNT_file="./arms.cnt"
+cage_file="./SLine.bin"
 
 
 import sys
@@ -23,19 +28,18 @@ plt.rc('font', family='serif')
 from subprocess import call
 
 
-R_QSL,theta_grid_QSL,phi_grid_QSL,Q=parse_QSL_Rbinfile(OCB_file)
-theta_grid_QSL*=180.0/np.pi
-phi_grid_QSL*=180.0/np.pi
-Q_grid=np.sign(Q)*np.log(abs(Q))/np.log(10.0)
-Q_grid[np.isinf(Q_grid)]=np.nan
+size_t_grid=400
+size_p_grid=500
 
-theta_v=np.linspace(theta_limits[0],theta_limits[1],num=300)
-phi_v=np.linspace(phi_limits[0],phi_limits[1],num=400)
+
+theta_v=np.linspace(theta_limits[0]+90.0,theta_limits[1]+90.0,num=size_t_grid)
+phi_v=np.linspace(phi_limits[0],phi_limits[1],num=size_p_grid)
 theta_grid_v,phi_grid_v=np.meshgrid(theta_v,phi_v)
 v_grid=np.zeros((np.shape(phi_grid_v)[0],np.shape(phi_grid_v)[1],num_frames_v))
 
 
 Time_profiles,sflow_parameters=parse_sflow_CNT(CNT_file)
+static_cages,dynamic_cages=surfaceline_read_binary_cage(cage_file)
 
 
 def GaussDGauss_vortex(theta_grid,phi_grid,tlsfl,trsfl,tcsfl,ktsfl,vtsfl,plsfl,prsfl,pcsfl,kpsfl,vpsfl):
@@ -97,7 +101,7 @@ for idx_t in range(num_frames_v):
 			ticsfl=sflow_parameters[idx][17]
 			ktisfl=sflow_parameters[idx][18]
 			v_theta,v_phi=GaussDGauss_vortex(theta_grid_v,phi_grid_v,tlsfl,trsfl,tcsfl,ktsfl,vtsfl,plsfl,prsfl,pcsfl,kpsfl,vpsfl)
-			t_func=ARMS_cos_t(t_current,tilsfl,tirsfl,ticsfl,ktisfl)#TODO
+			t_func=ARMS_cos_t(t_current,tilsfl,tirsfl,ticsfl,ktisfl)
 			v_theta_tot+=v_theta*t_func
 			v_phi_tot+=v_phi*t_func
 	v_grid[:,:,idx_t]=np.sqrt(v_theta_tot**2+v_phi_tot**2)
@@ -108,37 +112,17 @@ call_result=call(["mkdir","./anim_temp"])
 
 
 plot_idx=0
-fig=plt.figure("Q 2D",figsize=(8,6))
-ax2=fig.gca()
-#plt.tight_layout()
-plt.title(r"$R=1R_{\odot}$",fontsize=20)
-color_plot2=plt.pcolormesh(phi_grid_QSL,theta_grid_QSL,Q_grid,cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
-plt.contour(phi_grid_QSL,theta_grid_QSL,np.sign(Q_grid), [0.0],colors=["black"])
-cbar2=fig.colorbar(color_plot2)#,ticks=[-4,-3,-2,-1,0])
-cbar2.ax.tick_params(labelsize=19,direction='in', left=True, right=True)
-cbar2.set_label(label=r"$\mathrm{slog}(Q)$",fontsize=20)
-plt.xlim(phi_limits)
-plt.ylim(theta_limits)
-plt.tick_params(axis='both', which='major',labelsize=19,direction='in',bottom=True, top=True, left=True, right=True)
-plt.ylabel(r"$\theta$ [$^{\circ}$]",fontsize=20)
-plt.xlabel(r"$\phi$ [$^{\circ}$]",fontsize=20)
-
-plt.savefig("./anim_temp/img{:03d}.png".format(plot_idx), format="png", dpi=100,bbox_inches='tight',pad_inches=0.1)
-plt.close(fig)
-plot_idx+=1
-for idx_f in range(1,num_frames_QSL):
-	call_result=call(["cp","./anim_temp/img{:03d}.png".format(plot_idx-1),"./anim_temp/img{:03d}.png".format(plot_idx)])
-	plot_idx+=1
-
-
 for idx_f in range(num_frames_v):
 	plt.clf()
 	fig=plt.figure("v",figsize=(8,6))
 	ax=fig.gca()
 	#plt.tight_layout()
 	plt.title(r"$R=1R_{\odot}$",fontsize=20)
-	color_plot=plt.pcolormesh(phi_grid_v,theta_grid_v,v_grid[:,:,idx_f],cmap='OrRd',vmin=0.0,vmax=max_v)
-	plt.contour(phi_grid_QSL,theta_grid_QSL,np.sign(Q_grid), [0.0],colors=["black"])
+	color_plot=plt.pcolormesh(phi_grid_v,theta_grid_v-90.0,v_grid[:-1,:-1,idx_f],cmap='OrRd',vmin=0.0,vmax=max_v)
+	for idx in range(len(static_cages)):
+		plt.plot(static_cages[idx][0,:],static_cages[idx][1,:]-90.0,color="black")
+	for idx in range(len(dynamic_cages)):
+		plt.plot(dynamic_cages[idx][0,:],dynamic_cages[idx][1,:]-90.0,color="black")
 	cbar=fig.colorbar(color_plot)#,ticks=[-4,-3,-2,-1,0])
 	cbar.ax.tick_params(labelsize=19,direction='in', left=True, right=True)
 	cbar.set_label(label=r"$|v|$ [km s$^{-1}$]",fontsize=20)
@@ -151,6 +135,17 @@ for idx_f in range(num_frames_v):
 	plt.savefig("./anim_temp/img{:03d}.png".format(plot_idx), format="png", dpi=100,bbox_inches='tight',pad_inches=0.1)
 	plt.close(fig)
 	plot_idx+=1
+	if idx_f==0:
+		for idx in range(pad_start_frames):
+			call_result=call(["cp","./anim_temp/img{:03d}.png".format(plot_idx-1),"./anim_temp/img{:03d}.png".format(plot_idx)])
+			plot_idx+=1
+	for idx in range(1,frames_per_step):
+		call_result=call(["cp","./anim_temp/img{:03d}.png".format(plot_idx-1),"./anim_temp/img{:03d}.png".format(plot_idx)])
+		plot_idx+=1
+	if idx_f==num_frames_v-1:
+		for idx in range(pad_end_frames):
+			call_result=call(["cp","./anim_temp/img{:03d}.png".format(plot_idx-1),"./anim_temp/img{:03d}.png".format(plot_idx)])
+			plot_idx+=1
 
 
 call_result=call(['ffmpeg -framerate '+str(frames_per_sec)+' -i ./anim_temp/img%03d.png -c:v libx264 -r 30 -pix_fmt yuv420p -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" ./anim_temp/anim.mp4'],shell=True)

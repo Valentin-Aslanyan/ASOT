@@ -1,27 +1,34 @@
 
+"""
+Manually select locations for surface flows
+Double left click location to add surface flow; double right click to remove
+Outputs locations in a format suitable for ARMS control files
 
+Uses squashing factor map from QSL Squasher (not included in this distribution)
+"""
 
 phi_limits=[-30,40]	#None for default
-theta_limits=[90,125]	#degrees
+theta_limits=[0,35]	#degrees
 min_size=0.2		#degrees
 
-v_phi=2.5E5
-v_theta=-2.5E5
+v_phi=0.4E5
+v_theta=-0.4E5
 k_phi=40.0
 k_theta=40.0
+flow_width=4.0	#degrees
 
-OCB_file="./PFLS/0044295/qslR1.bin"
+OCB_file="./PFLS/0000000/qslR1.bin"
 
 #degrees
-def create_limits(theta_coord,phi_coord):
-	width=4.0	#degrees
+def create_limits(theta_coord,phi_coord,width):
+	theta_central=np.round((90.0-point[1])/180.0*1000.0)/1000.0
+	phi_central=np.round(phi_coord/180.0*1000.0)/1000.0
+	width_round=np.round(width/180.0*1000)/1000.0
 
-	theta_central=(180.0-point[1])/180.0
-	phi_central=phi_coord/180.0
-	theta_left=theta_central-width/180.0
-	theta_right=theta_central+width/180.0
-	phi_left=phi_central-width/180.0
-	phi_right=phi_central+width/180.0
+	theta_left=theta_central-width_round
+	theta_right=theta_central+width_round
+	phi_left=phi_central-width_round
+	phi_right=phi_central+width_round
 	return theta_left,theta_central,theta_right,phi_left,phi_central,phi_right
 	
 
@@ -62,8 +69,8 @@ def Click_Loop(event):
 
 
 R_QSL,theta_grid_QSL,phi_grid_QSL,Q=parse_QSL_Rbinfile(OCB_file)
-theta_grid_QSL*=180.0/np.pi
-phi_grid_QSL*=180.0/np.pi
+theta_grid_QSL=theta_grid_QSL*RAD2DEG-90.0
+phi_grid_QSL*=RAD2DEG
 Q_grid=np.sign(Q)*np.log(abs(Q))/np.log(10.0)
 Q_grid[np.isinf(Q_grid)]=np.nan
 
@@ -78,7 +85,7 @@ def update_plot_points():
 fig2=plt.figure("Q 2D",figsize=(8,6))
 ax2=fig2.gca()
 plt.title(r"$R=1R_{\odot}$",fontsize=20)
-color_plot2=plt.pcolormesh(phi_grid_QSL,theta_grid_QSL,Q_grid,cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
+color_plot2=plt.pcolormesh(phi_grid_QSL,theta_grid_QSL,Q_grid[:-1,:-1],cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
 plt.contour(phi_grid_QSL,theta_grid_QSL,np.sign(Q_grid), [0.0],colors=["black"])
 points_plotted,=ax2.plot([],[],'o',color="blue")
 cbar2=fig2.colorbar(color_plot2)#,ticks=[-4,-3,-2,-1,0])
@@ -98,7 +105,7 @@ plt.show()
 
 print("      tlsfl       trsfl       tcsfl    ktsfl    vtsfl          plsfl          prsfl       pcsfl   kpsfl      vpsfl      tilsfl       tirsfl      ticsfl       ktisfl")
 for point in points_coordinates:
-	theta_left,theta_cnt,theta_right,phi_left,phi_cnt,phi_right=create_limits(point[1],point[0])
+	theta_left,theta_cnt,theta_right,phi_left,phi_cnt,phi_right=create_limits(point[1],point[0],flow_width)
 	print("[      {:.3f},".format(theta_left)+"      {:.3f},".format(theta_right)+"      {:.3f},".format(theta_cnt)+"  {:+.2e},".format(k_theta)+"  {:+.2e},".format(v_theta)
 +"   {:.3f},".format(phi_left)+"          {:.3f},".format(phi_right)+"       {:.3f},".format(phi_cnt)+"  {:+.2e},".format(k_phi)+"  {:+.2e},".format(v_phi)
 +"    0.0e+3,       4.0e+3,    0.0e+3,     2.0],")

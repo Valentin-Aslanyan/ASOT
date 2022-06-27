@@ -1,17 +1,13 @@
 
-
-t_start=0.0
-t_end=8000.0
-
-num_frames_QSL=200
-num_frames_v=240
-frames_per_sec=20
+"""
+Display size and direction of surface flow vortices (directly from ARMS control file) relative to Open/Closed boundary (or other "cage", e.g. Polarity Inversion Line)
+"""
 
 phi_limits=[-30,40]	#None for default
-theta_limits=[90,125]	#degrees
+theta_limits=[0,35]	#degrees
 
-CNT_file="./SHORT_arms.cnt"
-OCB_file="./PFLS/0044295/qslR1.bin"
+CNT_file="./arms.cnt"
+cage_file="./SurfaceLineData/SLine.bin"
 
 
 import sys
@@ -20,22 +16,15 @@ from ASOT_Functions_Python import *
 import matplotlib.pyplot as plt
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
-from subprocess import call
 
-
-R_QSL,theta_grid_QSL,phi_grid_QSL,Q=parse_QSL_Rbinfile(OCB_file)
-theta_grid_QSL*=180.0/np.pi
-phi_grid_QSL*=180.0/np.pi
-Q_grid=np.sign(Q)*np.log(abs(Q))/np.log(10.0)
-Q_grid[np.isinf(Q_grid)]=np.nan
 
 theta_v=np.linspace(theta_limits[0],theta_limits[1],num=300)
 phi_v=np.linspace(phi_limits[0],phi_limits[1],num=400)
 theta_grid_v,phi_grid_v=np.meshgrid(theta_v,phi_v)
-v_grid=np.zeros((np.shape(phi_grid_v)[0],np.shape(phi_grid_v)[1],num_frames_v))
 
 
 Time_profiles,sflow_parameters=parse_sflow_CNT(CNT_file)
+static_cages,dynamic_cages=surfaceline_read_binary_cage(cage_file)
 
 
 def Curve_vortex(theta_grid,phi_grid,tlsfl,trsfl,tcsfl,ktsfl,vtsfl,plsfl,prsfl,pcsfl,kpsfl,vpsfl):
@@ -75,7 +64,12 @@ fig=plt.figure("v",figsize=(12,6))
 ax=fig.gca()
 #plt.tight_layout()
 plt.title(r"$R=1R_{\odot}$",fontsize=20)
-plt.contour(phi_grid_QSL,theta_grid_QSL,np.sign(Q_grid), [0.0],colors=["black"])
+
+for idx in range(len(static_cages)):
+	plt.plot(static_cages[idx][0,:],static_cages[idx][1,:]-90.0,color="black")
+for idx in range(len(dynamic_cages)):
+	plt.plot(dynamic_cages[idx][0,:],dynamic_cages[idx][1,:]-90.0,color="black")
+
 for idx in range(len(sflow_parameters)):
 	if Time_profiles[idx]>1:
 		tlsfl=sflow_parameters[idx][5]
@@ -97,11 +91,8 @@ for idx in range(len(sflow_parameters)):
 			plot_color="orange"
 		else:
 			plot_color="green"
-		plt.plot(phi_curve*180.0/np.pi,theta_curve*180.0/np.pi,color=plot_color,linewidth=3)
+		plt.plot(phi_curve*RAD2DEG,theta_curve*RAD2DEG-90.0,color=plot_color,linewidth=3)
 
-#cbar=fig.colorbar(color_plot)#,ticks=[-4,-3,-2,-1,0])
-#cbar.ax.tick_params(labelsize=19,direction='in', left=True, right=True)
-#cbar.set_label(label=r"$|v|$ [km s$^{-1}$]",fontsize=20)
 plt.xlim(phi_limits)
 plt.ylim(theta_limits)
 plt.tick_params(axis='both', which='major',labelsize=19,direction='in',bottom=True, top=True, left=True, right=True)
