@@ -1,98 +1,20 @@
 
+"""
+Animate flicks data at given radius in 2D Carrington coordinates
 
-target_R=1.1	#
+Requires ffmpeg; written for Linux machines (possibly MacOS), needs altering for Windows
+pad_start_frames and pad_end_frames will repeat first/last frames
+"""
+
+target_R=1.1	#Solar radii
 file_directory="./"
-file_labels=['0044295',
- '0045393',
- '0046491',
- '0047592',
- '0048697',
- '0049811',
- '0050943',
- '0052102',
- '0053303',
- '0054553',
- '0055843',
- '0057191',
- '0058693',
- '0060485',
- '0062657',
- '0064977',
- '0067537',
- '0070299',
- '0073197',
- '0076220',
- '0079415',
- '0082818',
- '0086411',
- '0090247',
- '0094203',
- '0098514',
- '0103182',
- '0108224',
- '0113626',
- '0119721',
- '0125951',
- '0132228',
- '0138526',
- '0144829',
- '0151131',
- '0157436',
- '0163745',
- '0170056',
- '0176371',
- '0182686',
- '0189003',
- '0195323',
- '0201646',
- '0207970',
- '0214295',
- '0220620',
- '0226944',
- '0233269',
- '0239596',
- '0245921',
- '0252247',
- '0258573',
- '0264899',
- '0271225',
- '0277550',
- '0283876',
- '0290202',
- '0296528',
- '0302854',
- '0309180',
- '0315507',
- '0321832',
- '0328157',
- '0334482',
- '0340807',
- '0347131',
- '0353456',
- '0359780',
- '0366104',
- '0372428',
- '0378751',
- '0385075',
- '0391400',
- '0397724',
- '0404049',
- '0410375',
- '0416699',
- '0423024',
- '0429348',
- '0435672',
- '0441995',
- '0448319',
- '0454643',
- '0460966',
- '0467288',
- '0473610',
- '0479932',
- '0486254',
- '0492576',
- '0498898',
- '0505219']
+file_labels=['0000000',
+ '0000001',
+ '0000002',
+ '0000003',
+ '0000004',
+ '0000005',
+ '0000006']
 
 frames_per_step=2
 frames_per_sec=2
@@ -100,7 +22,7 @@ pad_start_frames=2
 pad_end_frames=2
 
 phi_limits=[-50,70]	#None for default
-theta_limits=[100,150]	#degrees
+theta_limits=[10,60]	#degrees
 
 #Use this to define 2D data array desired: log(rho), B^2 etc...
 def data_slice(data_in):
@@ -112,7 +34,7 @@ def time_label_function(time_float):
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ASOT_Functions_Python import *
+from ARMS_ASOT_Functions import *
 import matplotlib.pyplot as plt
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
@@ -120,14 +42,18 @@ from subprocess import call
 from scipy.interpolate import griddata
 
 
+size_t_grid=400
+size_p_grid=500
+
+
 if theta_limits!=None:
-	grid_theta=np.linspace(theta_limits[0]/180.0*np.pi,theta_limits[1]/180.0*np.pi,num=300)
+	grid_theta=np.linspace((theta_limits[0]+90.0)*DEG2RAD,(theta_limits[1]+90.0)*DEG2RAD,num=size_t_grid)
 else:
-	grid_theta=np.linspace(0.0,np.pi,num=300)
+	grid_theta=np.linspace(0.0,np.pi,num=size_t_grid)
 if phi_limits!=None:
-	grid_phi=np.linspace(phi_limits[0]/180.0*np.pi,phi_limits[1]/180.0*np.pi,num=200)
+	grid_phi=np.linspace(phi_limits[0]*DEG2RAD,phi_limits[1]*DEG2RAD,num=size_p_grid)
 else:
-	grid_phi=np.linspace(-np.pi,np.pi,num=200)
+	grid_phi=np.linspace(-np.pi,np.pi,num=size_p_grid)
 grid_theta,grid_phi=np.meshgrid(grid_theta,grid_phi)
 data_list=[]
 time_list=[]
@@ -157,8 +83,8 @@ for idx_f in range(len(file_labels)):
 	fig=plt.figure(figsize=(14,10))
 	ax=fig.gca()
 	plt.tight_layout()
-	plt.title("log$_{10}$ Mass density, $R=1.1$",fontsize=20)
-	color_plot=plt.pcolormesh(grid_phi*180.0/np.pi,grid_theta*180.0/np.pi,data_list[idx_f],cmap='pink_r',vmin=min_data,vmax=max_data)
+	plt.title("$R="+"{:.1f}".format(target_R)+"$",fontsize=20)
+	color_plot=plt.pcolormesh(grid_phi*RAD2DEG,grid_theta*RAD2DEG+90.0,data_list[idx_f],cmap='pink_r',vmin=min_data,vmax=max_data)
 	cbar=fig.colorbar(color_plot)#,ticks=[-4,-3,-2,-1,0])
 	cbar.ax.tick_params(labelsize=19,direction='in', left=True, right=True)
 	cbar.set_label(label=r"$\log(\rho)$",fontsize=20)
@@ -169,11 +95,11 @@ for idx_f in range(len(file_labels)):
 		if theta_limits!=None:
 			time_label=plt.text(phi_limits[0]+0.1*(phi_limits[1]-phi_limits[0]),theta_limits[0]+0.9*(theta_limits[1]-theta_limits[0]),time_label_function(time_list[idx_f]),fontsize=26)
 		else:
-			time_label=plt.text(phi_limits[0]+0.1*(phi_limits[1]-phi_limits[0]),160,time_label_function(time_list[idx_f]),fontsize=26)
+			time_label=plt.text(phi_limits[0]+0.1*(phi_limits[1]-phi_limits[0]),70,time_label_function(time_list[idx_f]),fontsize=26)
 	elif theta_limits!=None:
 		time_label=plt.text(-170,theta_limits[0]+0.9*(theta_limits[1]-theta_limits[0]),time_label_function(time_list[idx_f]),fontsize=26)			
 	else:
-		time_label=plt.text(-170,160,time_label_function(time_list[idx_f]),fontsize=26)
+		time_label=plt.text(-170,70,time_label_function(time_list[idx_f]),fontsize=26)
 	if phi_limits!=None:
 		plt.xlim(phi_limits)
 	if theta_limits!=None:

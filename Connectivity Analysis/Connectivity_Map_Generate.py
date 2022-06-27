@@ -22,7 +22,7 @@ delta_t=10.0
 connection_radius=1.0	#At photosphere if =None or =1.0 or =False
 custom_theta=[-20,50,2048]	#If above is true, put None or list: [lower,upper,number] (use degrees)
 custom_phi=[-70,70,4096]	#e.g. [-30.0,30.0,2048]
-bfield_step=2531467
+bfield_step=1000000
 generate_fieldlines_file=False
 fieldlines_file="./PFLS/fieldline.1000000"
 surface_connection_filename="./PFLS/Connection_0000000_1000000_r1.bin"

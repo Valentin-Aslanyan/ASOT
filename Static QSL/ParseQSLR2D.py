@@ -1,12 +1,15 @@
 
+"""
+Display squashing factor from QSL Squasher (not included in this distribution)
+"""
 
-filename="./PFLS/0044295/qslR3.bin"
+filename="./PFLS/0000000/qslR1.bin"
 plot_PIL=False	#Polarity Inversion Line, at outer boundary
 
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ASOT_Functions_Python import *
+from ARMS_ASOT_Functions import *
 import matplotlib.pyplot as plt
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
@@ -19,8 +22,8 @@ if plot_PIL:
 	while idx>0 and filename[idx]!='/' and filename[idx]!="\\":
 		idx-=1
 	phi,theta,R,B=parse_QSL_folder(filename[:idx])
-	phi=(phi-180.0)*np.pi/180.0
-	theta=(theta+90.0)*np.pi/180.0
+	phi=(phi-180.0)*DEG2RAD
+	theta=(theta+90.0)*DEG2RAD
 	theta_PIL,phi_PIL=get_Polarity_Inversion_Line(phi,theta,B[-2,:,:,0])
 
 Q_grid=np.sign(Q)*np.log(abs(Q))/np.log(10.0)
@@ -33,10 +36,10 @@ Z_grid=np.cos(theta_grid)
 fig=plt.figure("Q 2D",figsize=(20,10))
 ax=fig.gca()
 plt.title(r"$R=1R_{\odot}$",fontsize=20)
-color_plot=plt.pcolormesh(phi_grid/np.pi*180.0,theta_grid/np.pi*180.0,Q_grid,cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
+color_plot=plt.pcolormesh(phi_grid*RAD2DEG,theta_grid*RAD2DEG-90.0,Q_grid,cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
 if plot_PIL:
-	plt.plot(phi_PIL/np.pi*180.0,theta_PIL/np.pi*180.0,color="black",linewidth=2)
-	plt.plot(phi_PIL/np.pi*180.0,theta_PIL/np.pi*180.0,color="orange",linewidth=1)
+	plt.plot(phi_PIL*RAD2DEG,theta_PIL*RAD2DEG-90.0,color="black",linewidth=2)
+	plt.plot(phi_PIL*RAD2DEG,theta_PIL*RAD2DEG-90.0,color="orange",linewidth=1)
 
 
 plt.tick_params(axis='both', which='major',labelsize=19,direction='in',bottom=True, top=True, left=True, right=True)

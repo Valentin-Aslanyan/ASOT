@@ -1,11 +1,14 @@
-"""
-Inputs: flicks file
 
+"""
+Animate flicks data at different radii, given time, in 2D Carrington coordinates
+
+Requires ffmpeg; written for Linux machines (possibly MacOS), needs altering for Windows
+pad_start_frames and pad_end_frames will repeat first/last frames
 """
 
 target_R=[1.0,1.05,1.1,1.15,1.2,1.25]	
 file_directory="./"
-flicks_file="flicks.0505739"
+flicks_file="flicks.0000000"
 
 frames_per_step=10
 frames_per_sec=2
@@ -13,7 +16,7 @@ pad_start_frames=2
 pad_end_frames=2
 
 phi_limits=[-50,70]	#None for default
-theta_limits=[100,150]	#degrees
+theta_limits=[10,60]	#degrees
 
 #Use this to define 2D data array desired: log(rho), B^2 etc...
 def data_slice(data_in):
@@ -25,22 +28,26 @@ def R_label_function(R):
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ASOT_Functions_Python import *
-from scipy.interpolate import griddata
+from ARMS_ASOT_Functions import *
 import matplotlib.pyplot as plt
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 from subprocess import call
+from scipy.interpolate import griddata
+
+
+size_t_grid=400
+size_p_grid=500
 
 
 if theta_limits!=None:
-	grid_theta=np.linspace(theta_limits[0]/180.0*np.pi,theta_limits[1]/180.0*np.pi,num=300)
+	grid_theta=np.linspace((theta_limits[0]+90.0)*DEG2RAD,(theta_limits[1]+90.0)*DEG2RAD,num=size_t_grid)
 else:
-	grid_theta=np.linspace(0.0,np.pi,num=300)
+	grid_theta=np.linspace(0.0,np.pi,num=size_t_grid)
 if phi_limits!=None:
-	grid_phi=np.linspace(phi_limits[0]/180.0*np.pi,phi_limits[1]/180.0*np.pi,num=200)
+	grid_phi=np.linspace(phi_limits[0]*DEG2RAD,phi_limits[1]*DEG2RAD,num=size_p_grid)
 else:
-	grid_phi=np.linspace(-np.pi,np.pi,num=200)
+	grid_phi=np.linspace(-np.pi,np.pi,num=size_p_grid)
 grid_theta,grid_phi=np.meshgrid(grid_theta,grid_phi)
 data_list=[]
 min_data=None
@@ -58,7 +65,6 @@ for Radius in target_R:
 		min_data=min(min(interp_grid.flatten()),min_data)
 		max_data=max(max(interp_grid.flatten()),max_data)	
 
-print(min_data,max_data)
 
 call_result=call(["mkdir","./anim_temp"])
 
@@ -69,11 +75,10 @@ for idx_f in range(len(target_R)):
 	fig=plt.figure(figsize=(14,10))
 	ax=fig.gca()
 	plt.tight_layout()
-	#plt.title("  ",fontsize=20)
-	color_plot=plt.pcolormesh(grid_phi*180.0/np.pi,grid_theta*180.0/np.pi,data_list[idx_f],cmap='hot_r',vmin=min_data,vmax=1.0)#max_data)
+	color_plot=plt.pcolormesh(grid_phi*RAD2DEG,grid_theta*RAD2DEG+90.0,data_list[idx_f],cmap='hot_r',vmin=min_data,vmax=1.0)#max_data)
 	cbar=fig.colorbar(color_plot)#,ticks=[-4,-3,-2,-1,0])
 	cbar.ax.tick_params(labelsize=19,direction='in', left=True, right=True)
-	cbar.set_label(label=r"$|\vec{J}|/|\vec{B}|$",fontsize=20)
+	cbar.set_label(label=r"Quantity",fontsize=20)
 	plt.xlabel(r'$\phi$ [$^{\circ}$]',fontsize=20)
 	plt.ylabel(r'$\theta$ [$^{\circ}$]',fontsize=20)
 	plt.tick_params(axis='both', which='major',labelsize=19,direction='in',bottom=True, top=True, left=True, right=True)
@@ -81,11 +86,11 @@ for idx_f in range(len(target_R)):
 		if theta_limits!=None:
 			time_label=plt.text(phi_limits[0]+0.1*(phi_limits[1]-phi_limits[0]),theta_limits[0]+0.9*(theta_limits[1]-theta_limits[0]),R_label_function(target_R[idx_f]),fontsize=26)
 		else:
-			time_label=plt.text(phi_limits[0]+0.1*(phi_limits[1]-phi_limits[0]),160,R_label_function(target_R[idx_f]),fontsize=26)
+			time_label=plt.text(phi_limits[0]+0.1*(phi_limits[1]-phi_limits[0]),70,R_label_function(target_R[idx_f]),fontsize=26)
 	elif theta_limits!=None:
 		time_label=plt.text(-170,theta_limits[0]+0.9*(theta_limits[1]-theta_limits[0]),R_label_function(target_R[idx_f]),fontsize=26)			
 	else:
-		time_label=plt.text(-170,160,R_label_function(target_R[idx_f]),fontsize=26)
+		time_label=plt.text(-170,70,R_label_function(target_R[idx_f]),fontsize=26)
 	if phi_limits!=None:
 		plt.xlim(phi_limits)
 	if theta_limits!=None:
