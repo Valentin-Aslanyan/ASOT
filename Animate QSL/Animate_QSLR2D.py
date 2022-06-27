@@ -8,14 +8,12 @@ pad_start_frames and pad_end_frames will repeat first/last frames
 
 
 filenames=[
-"./0000000/qslR1.bin",
-"./0000001/qslR1.bin",
-"./0000002/qslR1.bin",
-"./0000003/qslR1.bin",
-"./0000004/qslR1.bin",
-"./0000005/qslR1.bin",
-"./0000006/qslR1.bin",
-"./0000007/qslR1.bin"]
+"./PFLS/0000000/qslR1.bin",
+"./PFLS/0000001/qslR1.bin",
+"./PFLS/0000002/qslR1.bin",
+"./PFLS/0000003/qslR1.bin",
+"./PFLS/0000004/qslR1.bin",
+"./PFLS/0000005/qslR1.bin"]
 
 frames_per_step=4
 frames_per_sec=2
@@ -23,7 +21,7 @@ pad_start_frames=2
 pad_end_frames=2
 
 phi_limits=[-50,50]	#None for default
-theta_limits=[100,150]	#
+theta_limits=[10,60]	#
 
 
 import sys
@@ -37,7 +35,7 @@ from subprocess import call
 Q_list=[]
 for fname in filenames:
 	R,theta,phi,Q=parse_QSL_Rbinfile(fname)
-	Q_grid=np.sign(Q)*np.log(abs(Q))
+	Q_grid=np.sign(Q)*np.log(abs(Q))/np.log(10.0)
 	Q_grid[np.isinf(Q_grid)]=0.0#np.nan		#Note: animate bug if nan in data
 	Q_list.append(Q_grid)
 
@@ -51,7 +49,7 @@ for idx_f in range(len(filenames)):
 	fig=plt.figure(figsize=(13,6))
 	ax=fig.gca()
 	plt.tight_layout()
-	color_plot=plt.pcolormesh(phi*180.0/np.pi,theta*180.0/np.pi,Q_list[idx_f],cmap='RdBu_r',vmin=-10,vmax=10)
+	color_plot=plt.pcolormesh(phi*RAD2DEG,theta*RAD2DEG-90.0,Q_list[idx_f],cmap='RdBu_r',vmin=-5,vmax=5)
 	plt.xlabel(r'$\phi$ [$^{\circ}$]',fontsize=20)
 	plt.ylabel(r'$\theta$ [$^{\circ}$]',fontsize=20)
 	plt.tick_params(axis='both', which='major',labelsize=19,direction='in',bottom=True, top=True, left=True, right=True)

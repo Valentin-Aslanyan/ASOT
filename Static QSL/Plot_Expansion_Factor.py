@@ -2,7 +2,7 @@
 
 filename="./PFLS/0044295/qslR3Expansion.bin"
 
-theta_limits=[20,150]
+theta_limits=[-70,60]
 phi_limits=[-100,100]
 
 plot_contour=False
