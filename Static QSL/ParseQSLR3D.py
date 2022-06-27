@@ -1,7 +1,9 @@
 
+"""
+Display squashing factor from QSL Squasher (not included in this distribution) on 3D sphere
+"""
 
-filename="./PFLS/0078272/qsl.bin"
-
+filename="./PFLS/0000000/qslR1.bin"
 
 import sys
 sys.path[:0]=['/Change/This/Path']
@@ -11,7 +13,7 @@ from mayavi import mlab
 
 R_actual,theta,phi,Q=parse_QSL_Rbinfile(filename)
 
-Q_grid=np.sign(Q)*np.log(abs(Q))
+Q_grid=np.sign(Q)*np.log(abs(Q))/np.log(10.0)
 Q_grid[np.isinf(Q_grid)]=np.nan
 
 
@@ -21,7 +23,7 @@ Z_grid=np.cos(theta)
 
 
 mlab.figure("Q")
-sphere_mesh=mlab.mesh(X_grid[::-1,:],Y_grid[::-1,:],Z_grid[:,:],scalars=Q_grid[:,:],colormap='RdBu',vmin=-10,vmax=10)
+sphere_mesh=mlab.mesh(X_grid[::-1,:],Y_grid[::-1,:],Z_grid[:,:],scalars=Q_grid[:,:],colormap='RdBu',vmin=-5,vmax=5)
 sphere_mesh.actor.property.backface_culling = True
 sphere_mesh.module_manager.scalar_lut_manager.reverse_lut = True
 mlab.colorbar(orientation="vertical")

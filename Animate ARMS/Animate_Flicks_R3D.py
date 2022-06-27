@@ -34,7 +34,7 @@ def R_label_function(R):
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ARMS_ASOT_Functions import *
+from ASOT_Functions_Python import *
 from scipy.interpolate import griddata
 from mayavi import mlab
 from subprocess import call

@@ -18,7 +18,7 @@ nulls_directory="./"
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ARMS_ASOT_Functions import *
+from ASOT_Functions_Python import *
 if plot_nulls:
 	import HQVseg
 import matplotlib.pyplot as plt

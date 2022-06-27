@@ -30,7 +30,7 @@ surface_connection_filename="./PFLS/Connection_0000000_1000000_r1.bin"
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ARMS_ASOT_Functions import *
+from ASOT_Functions_Python import *
 from subprocess import call
 
 if use_Fortran_routines:

@@ -19,7 +19,7 @@ coordinates_output='carrington'
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ARMS_ASOT_Functions import *
+from ASOT_Functions_Python import *
 
 
 Time_profiles,sflow_parameters=parse_sflow_CNT(CNT_file)

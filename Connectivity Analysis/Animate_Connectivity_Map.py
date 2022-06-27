@@ -46,7 +46,7 @@ pad_end_frames=2
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ARMS_ASOT_Functions import *
+from ASOT_Functions_Python import *
 import matplotlib
 import matplotlib.pyplot as plt
 plt.rc('text', usetex=True)
