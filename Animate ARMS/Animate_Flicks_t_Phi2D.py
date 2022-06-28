@@ -1,24 +1,22 @@
 
+"""
+Animate flicks data at given longitude (phi) in 2D Carrington coordinates, optionally with fieldlines
 
-target_phi=-8.6	#degrees
+Requires ffmpeg; written for Linux machines (possibly MacOS), needs altering for Windows
+pad_start_frames and pad_end_frames will repeat first/last frames
+"""
+
+target_phi=0.0	#degrees
 file_directory="./"
-file_labels=['0044295', '0045393', '0046491', '0047589', '0048687', '0049786', '0050887', '0051993', '0053109', '0054245', '0055411', '0056624', '0057883', '0059184', '0060557', '0062111', '0063969', '0066124', '0068429', '0070944', '0073595', '0076407', '0079371', '0082461', '0085718', '0089162', '0092801', '0096648', '0100773', '0105253', '0110095', '0115333', '0120654', '0126628', '0132904', '0139195', '0145502', '0151807', '0158109', '0164410', '0170724', '0177039', '0183355', '0189669', '0195987', '0202307', '0208628', '0214949', '0221270', '0227591', '0233915', '0240241', '0246566', '0252890', '0259215', '0265539', '0271863', '0278185', '0284507', '0290829', '0297150', '0303470', '0309791', '0316112', '0322433', '0328754', '0335076', '0341397', '0347718', '0354039', '0360361', '0366683', '0373004', '0379325', '0385646', '0391966', '0398287', '0404607', '0410928', '0417249', '0423569', '0429890', '0436211', '0442532', '0448853', '0455174', '0461495', '0467816', '0474137', '0480457', '0486777', '0493098', '0499418', '0505739', '0512059', '0518379']
+file_labels=['0000000']
 
 R_limits=None		#None or Solar radii
 
 plot_gridfieldlines=False
 gridfieldlines_lims=[1.0,3.0]
-R_start4    =[]
-theta_start4=[+1.771]
-phi_start4  =[+0.017]
-
-R_start3    =[]
-theta_start3=[+1.710]
-phi_start3  =[+0.000]
-
-R_start2    =[]
-theta_start2=[+1.766]
-phi_start2  =[+0.000]
+R_start    =[ +1.000]
+theta_start=[+11.471]
+phi_start  =[ +0.000]
 
 frames_per_step=3
 frames_per_sec=10
@@ -43,10 +41,10 @@ from scipy.interpolate import griddata
 def is_block_in_limits(coord_logR,coord_theta,coord_phi,target_phi,R_limits):
 	in_limits=False
 	if R_limits!=None:
-		if coord_phi[0]<=target_phi/180.0*np.pi and coord_phi[1]>=target_phi/180.0*np.pi and np.exp(coord_logR[1])<=R_limits[1] and np.exp(coord_logR[0])>=R_limits[0]:
+		if coord_phi[0]<=target_phi*DEG2RAD and coord_phi[1]>=target_phi*DEG2RAD and np.exp(coord_logR[1])<=R_limits[1] and np.exp(coord_logR[0])>=R_limits[0]:
 			in_limits=True
 	else:
-		if coord_phi[0]<=target_phi/180.0*np.pi and coord_phi[1]>=target_phi/180.0*np.pi:
+		if coord_phi[0]<=target_phi*DEG2RAD and coord_phi[1]>=target_phi*DEG2RAD:
 			in_limits=True
 	return in_limits
 
@@ -57,9 +55,7 @@ arc_outer=[]
 radial_grid=[]
 arc1=[]
 arc2=[]
-fieldlines_4=[]
-fieldlines_3=[]
-fieldlines_2=[]
+fieldlines=[]
 plot_data_max=0.0
 num_arc=200
 
@@ -152,33 +148,16 @@ for idx_f in range(len(file_labels)):
 		arc1.append(arc1_curr)
 		arc2.append(arc2_curr)
 		
-		fieldlines_4_curr=[]
-		for idx in range(min(len(R_start4),len(theta_start4),len(phi_start4))):
-			field_line_start=np.array([R_start4[idx],theta_start4[idx],phi_start4[idx]])
+		fieldlines_curr=[]
+		for idx in range(min(len(R_start),len(theta_start),len(phi_start))):
+			th_temp,ph_temp=change_angular_coords(theta_start[idx],phi_start[idx],from_type='carrington',to_type='flicks')
+			field_line_start=np.array([R_start[idx],th_temp+0.5*np.pi,ph_temp])
 			field_line_sph=field_line_flicks(field_line_start,coord_logR,coord_theta,coord_phi,B_flicks,gridfieldlines_lims[0],gridfieldlines_lims[1],nlblks,n1pm1,n2pm1,n3pm1,step_size=1E-2)
 			field_line_X=field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.cos(field_line_sph[:,2]-target_phi/180.0*np.pi)
 			field_line_Y=-field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.sin(field_line_sph[:,2]-target_phi/180.0*np.pi)
 			field_line_Z=field_line_sph[:,0]*np.cos(np.pi-field_line_sph[:,1])
-			fieldlines_4_curr.append([field_line_X,field_line_Z])
-		fieldlines_4.append(fieldlines_4_curr)
-		fieldlines_3_curr=[]
-		for idx in range(min(len(R_start3),len(theta_start3),len(phi_start3))):
-			field_line_start=np.array([R_start3[idx],theta_start3[idx],phi_start3[idx]])
-			field_line_sph=field_line_flicks(field_line_start,coord_logR,coord_theta,coord_phi,B_flicks,gridfieldlines_lims[0],gridfieldlines_lims[1],nlblks,n1pm1,n2pm1,n3pm1,step_size=1E-2)
-			field_line_X=field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.cos(field_line_sph[:,2]-target_phi/180.0*np.pi)
-			field_line_Y=-field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.sin(field_line_sph[:,2]-target_phi/180.0*np.pi)
-			field_line_Z=field_line_sph[:,0]*np.cos(np.pi-field_line_sph[:,1])
-			fieldlines_3_curr.append([field_line_X,field_line_Z])
-		fieldlines_3.append(fieldlines_3_curr)
-		fieldlines_2_curr=[]
-		for idx in range(min(len(R_start2),len(theta_start2),len(phi_start2))):
-			field_line_start=np.array([R_start2[idx],theta_start2[idx],phi_start2[idx]])
-			field_line_sph=field_line_flicks(field_line_start,coord_logR,coord_theta,coord_phi,B_flicks,gridfieldlines_lims[0],gridfieldlines_lims[1],nlblks,n1pm1,n2pm1,n3pm1,step_size=1E-2)
-			field_line_X=field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.cos(field_line_sph[:,2]-target_phi/180.0*np.pi)
-			field_line_Y=-field_line_sph[:,0]*np.sin(np.pi-field_line_sph[:,1])#*np.sin(field_line_sph[:,2]-target_phi/180.0*np.pi)
-			field_line_Z=field_line_sph[:,0]*np.cos(np.pi-field_line_sph[:,1])
-			fieldlines_2_curr.append([field_line_X,field_line_Z])
-		fieldlines_2.append(fieldlines_2_curr)
+			fieldlines_curr.append([field_line_X,field_line_Z])
+		fieldlines.append(fieldlines_curr)
 
 call_result=call(["mkdir","./anim_temp"])
 
@@ -187,7 +166,6 @@ plot_idx=0
 for idx_f in range(len(file_labels)):
 	plt.clf()
 	fig=plt.figure("Output",figsize=(3.1*1.5,6*1.5))
-	plt.title(r"$\log(|\vec{J}|/|\vec{B}|)$",fontsize=20)
 	plt.pcolormesh(grid_x[idx_f],grid_y[idx_f],plot_data_grid[idx_f],cmap='RdPu',rasterized=True,vmax=plot_data_max)#,vmin=0.0,vmax=1.0)
 	plt.plot(arc_outer[idx_f][0,:],arc_outer[idx_f][1,:],color="blue",linewidth=2)
 	if plot_gridfieldlines:
@@ -196,12 +174,8 @@ for idx_f in range(len(file_labels)):
 			plt.plot(radial_grid[idx_f][idx,0,2:],radial_grid[idx_f][idx,1,2:],color="grey",linewidth=1)
 			plt.plot(arc1[idx_f][idx,0,:],arc1[idx_f][idx,1,:],color="grey",linewidth=1)
 			plt.plot(arc2[idx_f][idx,0,:],arc2[idx_f][idx,1,:],color="grey",linewidth=1)
-		for idx in range(len(fieldlines_4[idx_f])):
-			plt.plot(fieldlines_4[idx_f][idx][0],fieldlines_4[idx_f][idx][1],color="#386CB0",linewidth=2)
-		for idx in range(len(fieldlines_3[idx_f])):
-			plt.plot(fieldlines_3[idx_f][idx][0],fieldlines_3[idx_f][idx][1],color="#FFFF99",linewidth=2)
-		for idx in range(len(fieldlines_2[idx_f])):
-			plt.plot(fieldlines_2[idx_f][idx][0],fieldlines_2[idx_f][idx][1],color="#FDC086",linewidth=2)
+		for idx in range(len(fieldlines[idx_f])):
+			plt.plot(fieldlines[idx_f][idx][0],fieldlines[idx_f][idx][1],color="black",linewidth=2)
 
 	plt.axis('off')
 	plt.xlim([0,3.1])

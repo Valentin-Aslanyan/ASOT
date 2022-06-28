@@ -1,32 +1,23 @@
 
+"""
+Animate successive slices through flicks files with data interpolated along a given field line
 
-target_phi=-8.6	#degrees
+Requires ffmpeg; written for Linux machines (possibly MacOS), needs altering for Windows
+pad_start_frames and pad_end_frames will repeat first/last frames
+"""
+
+target_phi=0.0	#degrees
 file_directory="./"
-flicks_files=["flicks.0044295",
-"flicks.0045393",
-"flicks.0046491",
-"flicks.0047589",
-"flicks.0048687",
-"flicks.0049786",
-"flicks.0050887",
-"flicks.0051993",
-"flicks.0053109",
-"flicks.0054245",
-"flicks.0055411",
-"flicks.0056624",
-"flicks.0057883",
-"flicks.0059184"]
+flicks_files=["flicks.0000000"]
 
 frames_per_step=3
 frames_per_sec=2
 pad_start_frames=6
-pad_end_frames=0
+pad_end_frames=2
 
-R_start    =[+1.000]
-theta_start=[+1.977]
-phi_start  =[-0.115]
-
-fieldline_type_colors=["#7FC97F","#BEAED4","#FDC086","#FFFF99","#386CB0","#F0027F","#BF5B17","#666666"]
+R_start    =[ +1.000]
+theta_start=[+11.471]
+phi_start  =[ +0.000]
 
 
 import sys
@@ -68,7 +59,8 @@ for fname in flicks_files:
 	grid_coords.append(grid_coords_current)
 	field_lines_current=[]
 	for idx in range(min(len(R_start),len(theta_start),len(phi_start))):
-		field_line_start=np.array([R_start[idx],theta_start[idx],phi_start[idx]])
+		th_temp,ph_temp=change_angular_coords(theta_start[idx],phi_start[idx],from_type='carrington',to_type='flicks')
+		field_line_start=np.array([R_start[idx],th_temp+0.5*np.pi,ph_temp])
 		field_line_sph=data_along_field_line_flicks(field_line_start,coord_logR,coord_theta,coord_phi,B_flicks,data_flicks,1.0,2.9,nlblks,n1pm1,n2pm1,n3pm1,step_size=1E-2)
 		max_J=max(max_J,max(field_line_sph[:,3]))
 		max_JoverB=max(max_JoverB,max(field_line_sph[:,4]))
