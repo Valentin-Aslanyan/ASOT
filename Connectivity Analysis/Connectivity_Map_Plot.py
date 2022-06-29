@@ -1,51 +1,48 @@
 
+"""
+Plot the squashing factor (from QSL which is not included in this repository) at the photosphere and higher up at a late time in a simulation
+The connectivity map is also plotted; a selection of field lines of a given type (e.g. reconnected open) are optionally displayed at the outer boundary
+"""
 
-solar_Radius=1.0*7E10
-CNT_file="./arms.cnt"
-start_file="./PFLS/0044295/qslR1Fine.bin"
-end_file="./PFLS/0059184/qslR1Fine.bin"
-end_file_outer="./PFLS/0059184/qslR3.bin"
-connection_filename="./PFLS/Connection_18_0044295_0059184.bin"
-start_time=4200.0
-end_time=5300.0
-delta_t=10.0
+end_file="./PFLS/0001000/qslR1.bin"
+end_file_outer="./PFLS/0001000/qslR3.bin"
+connection_filename="./PFLS/Connection_0000000_0001000.bin"
+start_time=0.0
+end_time=1000.0
 phi_limits=[-12,-2]		#None for default
-theta_limits=[110,120]		#
+theta_limits=[20,30]		#
 phi_limits_out=[-60,60]		#None for default
-theta_limits_out=[80,150]	#
+theta_limits_out=[-10,60]	#
 
-cage_from_file=True
-SurfaceLine_file="./SurfaceLineData/SLine_5300.bin"
-SurfaceLine_initial="./SurfaceLineData/SLine_4000.bin"
+SurfaceLine_file="./SLine_1000.bin"
 
 plot_top_connections=True	#Plot where the given classification(s) of field lines reach upper boundary
-top_connection_types=[4,5]	#designations of the types of field lines to trace
+top_connection_types=[2]	#designations of the types of field lines to trace
 top_connection_num=5	#Number of field lines to trace, or "All"
 radius_inner=1.0
 radius_outer=2.99
 
-fieldline_type_colors=["#7FC97F","#BEAED4","#FDC086","#FFFF99","#386CB0","#F0027F","#BF5B17","#666666"]
 
 import sys
 sys.path[:0]=['/Change/This/Path']
 from ASOT_Functions_Python import *
+import matplotlib
 import matplotlib.pyplot as plt
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 import random
 
 
-R,theta_grid,phi_grid,Q_start,Q_end,connection_map=load_connection_map(start_file,end_file,connection_filename)
-R_out,theta_out,phi_out,Q_out=parse_QSL_Rbinfile(end_file_outer)
-Time_profiles,sflow_parameters=parse_sflow_CNT(CNT_file)
+connection_colors=[(171/255,210/255,229/255),(244/255,166/255,131/255),(102/255,102/255,102/255),(143/255,145/255,0/255),(1.0,128/255,0)]
+connection_cmap=matplotlib.colors.ListedColormap(((171/255,210/255,229/255),(244/255,166/255,131/255),(102/255,102/255,102/255),(143/255,145/255,0/255),(1.0,128/255,0)))
 
-if cage_from_file:
-	static_cages,dynamic_cages=surfaceline_read_binary_cage(SurfaceLine_file)
-else:
-	static_cages,dynamic_cages_temp=surfaceline_read_binary_cage(SurfaceLine_initial)
-	dynamic_cages=[]
-	for idx in range(len(dynamic_cages_temp)):
-		dynamic_cages.append(surfaceline_advance_cage(dynamic_cages_temp[idx],start_time,[end_time],delta_t,CNT_file,solar_Radius)[:,:,0])
+
+theta_grid,phi_grid,connection_map=load_connection_map(connection_filename)
+connection_map=np.floor(connection_map/2)
+R_end,theta_end,phi_end,Q_end=parse_QSL_Rbinfile(end_file)
+R_out,theta_out,phi_out,Q_out=parse_QSL_Rbinfile(end_file_outer)
+
+static_cages,dynamic_cages=surfaceline_read_binary_cage(SurfaceLine_file)
 
 
 if plot_top_connections:
@@ -101,17 +98,15 @@ fig1=plt.figure("Connection map",figsize=(15,14))
 plt.subplot(2,2,1)
 ax1_1=fig1.gca()
 plt.title(r"$R=R_{\odot}$",fontsize=20)
-color_plot1_1=plt.pcolormesh((phi_grid-0.5*phi_spacing)*180.0/np.pi,(theta_grid-0.5*theta_spacing)*180.0/np.pi,np.sign(Q_end)*np.log(abs(Q_end)),cmap='RdBu_r',vmin=-10,vmax=10,rasterized=True)
+color_plot1_1=plt.pcolormesh((phi_grid-0.5*phi_spacing)*RAD2DEG,(theta_grid-0.5*theta_spacing)*RAD2DEG-90.0,(np.sign(Q_end)*np.log(abs(Q_end))/np.log(10.0))[:-1,:-1],cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
 for idx_c in range(len(dynamic_cages)):
-	plt.plot(dynamic_cages[idx_c][0,:],dynamic_cages[idx_c][1,:],'-',color="black")
+	plt.plot(dynamic_cages[idx_c][0,:],dynamic_cages[idx_c][1,:]-90.0,'-',color="black")
 for idx_c in range(len(static_cages)):
-	plt.plot(static_cages[idx_c][0,:],static_cages[idx_c][1,:],color="black")
+	plt.plot(static_cages[idx_c][0,:],static_cages[idx_c][1,:]-90.0,color="black")
 plt.tick_params(axis='both', which='major',labelsize=19,direction='in',bottom=True, top=True, left=True, right=True)
 plt.ylabel(r"$\theta$ [$^{\circ}$]",fontsize=20)
 plt.xlabel(r"$\phi$ [$^{\circ}$]",fontsize=20)
-#cbar1_1=fig1.colorbar(color_plot1_1)#,ticks=[-4,-3,-2,-1,0])
-#cbar1_1.ax.tick_params(labelsize=19,direction='in', left=True, right=True)
-#cbar1_1.set_label(label=r"$\mathrm{slog}(Q)$",fontsize=20)
+
 if phi_limits!=None:
 	plt.xlim(phi_limits)
 if theta_limits!=None:
@@ -120,7 +115,7 @@ if theta_limits!=None:
 plt.subplot(2,2,2)
 ax1_2=fig1.gca()
 plt.title(r"$R=R_{\mathrm{SS}}=3R_{\odot}$",fontsize=20)
-color_plot1_2=plt.pcolormesh((phi_out-0.5*phi_spacing_out)*180.0/np.pi,(theta_out-0.5*theta_spacing_out)*180.0/np.pi,np.sign(Q_out)*np.log(abs(Q_out)),cmap='RdBu_r',vmin=-10,vmax=10,rasterized=True)
+color_plot1_2=plt.pcolormesh((phi_out-0.5*phi_spacing_out)*RAD2DEG,(theta_out-0.5*theta_spacing_out)*RAD2DEG-90.0,(np.sign(Q_out)*np.log(abs(Q_out))/np.log(10.0))[:-1,:-1],cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
 plt.tick_params(axis='both', which='major',labelsize=19,direction='in',bottom=True, top=True, left=True, right=True)
 plt.xlabel(r"$\phi$ [$^{\circ}$]",fontsize=20)
 cbar1_2=fig1.colorbar(color_plot1_2)#,ticks=[-4,-3,-2,-1,0])
@@ -132,20 +127,17 @@ if theta_limits_out!=None:
 	plt.ylim(theta_limits_out)
 
 if plot_top_connections:
-	#for idx in range(len(top_connection_types)):
-	#	for idx2 in range(len(top_connections[idx])):
-	#		plt.plot(top_connections[idx][idx2][0]/np.pi*180.0,top_connections[idx][idx2][1]/np.pi*180.0,'H',ms=6,mew=0.0,mfc=fieldline_type_colors[top_connection_types[idx]],fillstyle='full')
 	for idx in range(len(top_connection_types)):
 		for idx2 in range(len(top_connections[idx])):
-			plt.plot(top_connections[idx][idx2][0]/np.pi*180.0,top_connections[idx][idx2][1]/np.pi*180.0,'H',ms=6,mec='black',mew=0.5,fillstyle='none')
+			plt.plot(top_connections[idx][idx2][0]*RAD2DEG,top_connections[idx][idx2][1]*RAD2DEG-90.0,'H',ms=6,mec='black',mew=0.5,fillstyle='none')
 
 plt.subplot(2,2,3)
 ax1_3=fig1.gca()
-color_plot1_3=plt.pcolormesh((phi_grid-0.5*phi_spacing)/np.pi*180.0,(theta_grid-0.5*theta_spacing)/np.pi*180.0,connection_map+0.5,cmap='Accent',vmin=0,vmax=8,rasterized=True)
+color_plot1_3=plt.pcolormesh((phi_grid-0.5*phi_spacing)*RAD2DEG,(theta_grid-0.5*theta_spacing)*RAD2DEG-90.0,connection_map[:-1,:-1]+0.5,cmap=connection_cmap,vmin=0,vmax=5,rasterized=True)
 for idx_c in range(len(dynamic_cages)):
-	plt.plot(dynamic_cages[idx_c][0,:],dynamic_cages[idx_c][1,:],'-',color="black")
+	plt.plot(dynamic_cages[idx_c][0,:],dynamic_cages[idx_c][1,:]-90.0,'-',color="black")
 for idx_c in range(len(static_cages)):
-	plt.plot(static_cages[idx_c][0,:],static_cages[idx_c][1,:],color="black")
+	plt.plot(static_cages[idx_c][0,:],static_cages[idx_c][1,:]-90.0,color="black")
 plt.tick_params(axis='both', which='major',labelsize=19,direction='in',bottom=True, top=True, left=True, right=True)
 plt.ylabel(r"$\theta$ [$^{\circ}$]",fontsize=20)
 plt.xlabel(r"$\phi$ [$^{\circ}$]",fontsize=20)
@@ -155,8 +147,22 @@ if theta_limits!=None:
 	plt.ylim(theta_limits)
 
 #Key
+ax1_4=fig1.add_axes([0.61, 0.2, 0.15, 0.2])
+color_plot1_4=plt.pcolormesh(np.array([0,1,2]),np.array([0,1,2]),np.array([[0.5,1.5],[2.5,3.5]]),cmap=connection_cmap,vmin=0,vmax=5,rasterized=True)
+ax1_4.set_xticks([])
+ax1_4.set_yticks([])
+plt.text(-1.3,0.55,"Connectivity",fontsize=20)
+plt.text(-1.3,0.25,"retained",fontsize=20)
+plt.text(-1.3,1.4,"Reconnected",fontsize=20)
+
+plt.text(0.05,2.15,r"Open",fontsize=20)
+plt.text(1.1,2.15,r"Closed",fontsize=20)
+plt.text(-0.05,2.4,r"Field line end state",fontsize=20)
+
+"""
+#Old colorscheme with 8 levels
 ax1_4=fig1.add_axes([0.61, 0.2, 0.26, 0.13])
-color_plot1_4=plt.pcolormesh(np.array([0,1,2,3,4]),np.array([0,1,2]),np.array([[0.5,1.5,2.5,3.5,3.5],[4.5,5.5,6.5,7.5,7.5],[4.5,5.5,6.5,7.5,7.5]]),cmap='Accent',vmin=0,vmax=8,rasterized=True)
+color_plot1_4=plt.pcolormesh(np.array([0,1,2,3,4]),np.array([0,1,2]),np.array([[0.5,1.5,2.5,3.5,3.5],[4.5,5.5,6.5,7.5,7.5],[4.5,5.5,6.5,7.5,7.5]]),cmap=connection_cmap,vmin=0,vmax=8,rasterized=True)
 ax1_4.set_xticks([])
 ax1_4.set_yticks([])
 plt.text(-1.3,0.4,"Convected",fontsize=20)
@@ -168,7 +174,7 @@ plt.text(1.2,2.2,r"C$\rightarrow$O",fontsize=20)
 plt.text(2.2,2.2,r"O$\rightarrow$C",fontsize=20)
 plt.text(3.2,2.2,r"C$\rightarrow$C",fontsize=20)
 plt.text(0.6,2.7,r"Open/Closed field lines",fontsize=20)
-
+"""
 
 plt.savefig("Connectivity_Map.pdf", format="pdf", dpi=100,bbox_inches='tight',pad_inches=0.1)
 
