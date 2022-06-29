@@ -1,50 +1,42 @@
 
+"""
+Animate the footpoint of a fieldline being advected on top of the squashing factor with flicks data interpolated along a given field line
 
-target_phi=-8.6	#degrees
+Requires ffmpeg; written for Linux machines (possibly MacOS), needs altering for Windows
+pad_start_frames and pad_end_frames will repeat first/last frames
+"""
+
+target_phi=0.0	#degrees
 solar_Radius=1.0*7E10
 phi_limits=[-20,0]
-theta_limits=[100,120]
+theta_limits=[10,30]
 target_directory="./"
 plot_cage=True
-use_Fortran_library=True
-SurfaceLine_initial="./SurfaceLineData/SLine_4000.bin"
-t_start=4.0e+3
-delta_t=10.0
+SurfaceLine_filenames=[
+"./SurfaceLineData/SLine_1000.bin",
+"./SurfaceLineData/SLine_2000.bin",
+"./SurfaceLineData/SLine_3000.bin",
+"./SurfaceLineData/SLine_4000.bin",
+"./SurfaceLineData/SLine_5000.bin"]
 
 frames_per_step=3
 frames_per_sec=3
 pad_start_frames=2
 pad_end_frames=2
 
-file_IDs=["0044295",
-"0046491",
-"0047589",
-"0048687",
-"0049786",
-"0050887",
-"0051993",
-"0053109",
-"0054245",
-"0055411",
-"0056624",
-"0057883",
-"0059184",
-"0060557",
-"0062111",
-"0063969",
-"0066124",
-"0068429",
-"0070944",
-"0073595",
-"0076407",
-"0079371"]
+file_IDs=[
+"0001000",
+"0002000",
+"0003000",
+"0004000",
+"0005000"]
 
 advect_startpoints=True
-R_start    =[+1.000]
-theta_start=[+2.010]
-phi_start  =[-0.121]
-
-fieldline_type_colors=["#7FC97F","#BEAED4","#FDC086","#FFFF99","#386CB0","#F0027F","#BF5B17","#666666"]
+t_start=0.0
+delta_t=10.0
+R_start    =[ +1.000]
+theta_start=[+25.164]
+phi_start  =[ -6.933]
 
 import sys
 sys.path[:0]=['/Change/This/Path']
@@ -54,14 +46,17 @@ plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 from subprocess import call
 
-
+if plot_cage:
+	num_frames=min(len(file_IDs),len(SurfaceLine_filenames))
+else:
+	num_frames=len(file_IDs)
 num_startpoints=min(len(R_start),len(theta_start),len(phi_start))
 Time_profiles,sflow_parameters=parse_sflow_CNT(os.path.join(target_directory,"arms.cnt"))
 t=t_start
 cage_stpts=np.array([phi_start[:num_startpoints],theta_start[:num_startpoints]])
-cage_stpts[0,:]=cage_stpts[0,:]/np.pi
-cage_stpts[1,:]=1.0-cage_stpts[1,:]/np.pi
-cage_stpts_output=np.zeros((2,len(cage_stpts[0,:]),len(file_IDs)))
+cage_stpts[0,:]=cage_stpts[0,:]/180.0
+cage_stpts[1,:]=0.5-cage_stpts[1,:]/180.0
+cage_stpts_output=np.zeros((2,len(cage_stpts[0,:]),num_frames))
 
 
 field_lines=[]
@@ -75,9 +70,9 @@ max_v=0.0
 max_JdotB=0.0
 max_size_field_line=0
 Q_list=[]
-for idx_f in range(len(file_IDs)):
+for idx_f in range(num_frames):
 	R,theta,phi,Q=parse_QSL_Rbinfile(os.path.join(target_directory,'PFLS',file_IDs[idx_f],'qslR1.bin'))
-	Q_grid=np.sign(Q)*np.log(abs(Q))
+	Q_grid=np.sign(Q)*np.log(abs(Q))/np.log(10.0)
 	Q_grid[np.isinf(Q_grid)]=0.0#np.nan		#Note: animate bug if nan in data
 	Q_list.append(Q_grid)
 
@@ -115,7 +110,7 @@ for idx_f in range(len(file_IDs)):
 	output_times.append(time)
 	grid_coords_current=[]
 	for idx in range(len(coord_logR)):
-		if coord_phi[idx][0]<=target_phi/180.0*np.pi and coord_phi[idx][1]>=target_phi/180.0*np.pi:
+		if coord_phi[idx][0]<=target_phi*DEG2RAD and coord_phi[idx][1]>=target_phi*DEG2RAD:
 			grid_coords_current.append([coord_logR[idx],coord_theta[idx]])
 	grid_coords.append(grid_coords_current)
 	field_lines_current=[]
@@ -134,57 +129,19 @@ for idx_f in range(len(file_IDs)):
 
 
 if plot_cage:
-	if use_Fortran_library:
-		SurfaceLine_base=SurfaceLine_initial.replace('.bin','')
-		len_fname=len(SurfaceLine_base)
-		while len_fname>0 and SurfaceLine_base[len_fname-1].isnumeric():
-			len_fname-=1
-		SurfaceLine_base=SurfaceLine_base[:len_fname]
-		SurfaceLine_files=[]
-		Fcnt_file=open("SurfaceLine_Advance.cnt","w")
-		print("!arms.cnt directory",file=Fcnt_file)
-		print(os.path.join(target_directory,"arms.cnt"),file=Fcnt_file)
-		print("!Initial cage file",file=Fcnt_file)
-		print(SurfaceLine_initial,file=Fcnt_file)
-		print("!t_start",file=Fcnt_file)
-		print(t_start,file=Fcnt_file)
-		print("!delta_t",file=Fcnt_file)
-		print(delta_t,file=Fcnt_file)
-		print("!solar_Radius",file=Fcnt_file)
-		print(solar_Radius,file=Fcnt_file)
-		print("!number of outputs (for plot_t)",file=Fcnt_file)
-		print(len(output_times),file=Fcnt_file)
-		print("!plot_t, each one on new line",file=Fcnt_file)
-		for time in output_times:
-			print(time,file=Fcnt_file)
-		print("!SurfaceLine_outputs",file=Fcnt_file)
-		for time in output_times:
-			SurfaceLine_files.append(SurfaceLine_base+str(int(time))+'.bin')
-			print(SurfaceLine_base+str(int(time))+'.bin',file=Fcnt_file)
-		Fcnt_file.close()
-		call_result=call(["./SurfaceLine_Advance"])
-		static_cages,dynamic_cages_temp=surfaceline_read_binary_cage(SurfaceLine_files[0])
-		dynamic_cages=[]
-		for idx in range(len(dynamic_cages_temp)):
-			dynamic_cages.append(np.zeros((np.shape(dynamic_cages_temp[idx])[0],np.shape(dynamic_cages_temp[idx])[1],len(SurfaceLine_files))))
-			dynamic_cages[idx][:,:,0]=dynamic_cages_temp[idx][:,:]
-		for idx in range(1,len(SurfaceLine_files)):
-			static_cages,dynamic_cages_temp=surfaceline_read_binary_cage(SurfaceLine_files[idx])
-			for idx2 in range(len(dynamic_cages_temp)):
-				dynamic_cages[idx2][:,:,idx]=dynamic_cages_temp[idx2][:,:]
-	else:
-		static_cages,dynamic_cages_temp=surfaceline_read_binary_cage(SurfaceLine_initial)
-		dynamic_cages=[]
-		for idx in range(len(dynamic_cages_temp)):
-			dynamic_cages.append(surfaceline_advance_cage(dynamic_cages_temp[idx],t_start,output_times,delta_t,os.path.join(target_directory,"arms.cnt"),solar_Radius))
-
+	static_cages=[]
+	dynamic_cages=[]
+	for idx_f in range(num_frames):
+		static_cages_temp,dynamic_cages_temp=surfaceline_read_binary_cage(SurfaceLine_filenames[idx_f])
+		static_cages.append(static_cages_temp)
+		dynamic_cages.append(dynamic_cages_temp)
 
 
 call_result=call(["mkdir","./anim_temp"])
 
 
 plot_idx=0
-for idx_f in range(len(file_IDs)):
+for idx_f in range(num_frames):
 	fig1=plt.figure("A",figsize=(22,18))
 	plt.clf()
 
@@ -195,13 +152,13 @@ for idx_f in range(len(file_IDs)):
 	plt.ylabel(r'$\theta$ [$^{\circ}$]',fontsize=20)
 	plt.tick_params(axis='both', which='major',labelsize=19,direction='in',bottom=True, top=True, left=True, right=True)
 
-	color_plot=plt.pcolormesh(phi*180.0/np.pi,theta*180.0/np.pi,Q_list[idx_f],cmap='RdBu_r',vmin=-10,vmax=10,rasterized=True)
+	color_plot=plt.pcolormesh(phi*RAD2DEG,theta*RAD2DEG-90.0,Q_list[idx_f][:-1,:-1],cmap='RdBu_r',vmin=-5,vmax=5,rasterized=True)
 	if plot_cage:
-		for idx_c in range(len(dynamic_cages)):
-			plt.plot(dynamic_cages[idx_c][0,:,idx_f],dynamic_cages[idx_c][1,:,idx_f],'-',color="black")
-		for idx_c in range(len(static_cages)):
-			plt.plot(static_cages[idx_c][0,:],static_cages[idx_c][1,:],color="black")
-	plt.plot(cage_stpts_output[0,:,idx_f]*180.0,(1.0-cage_stpts_output[1,:,idx_f])*180.0,'+',ms=14,color="black")
+		for idx_c in range(len(dynamic_cages[idx_f])):
+			plt.plot(dynamic_cages[idx_f][idx_c][0,:],dynamic_cages[idx_f][idx_c][1,:]-90.0,'-',color="black")
+		for idx_c in range(len(static_cages[idx_f])):
+			plt.plot(static_cages[idx_f][idx_c][0,:],static_cages[idx_f][idx_c][1,:]-90.0,color="black")
+	plt.plot(cage_stpts_output[0,:,idx_f]*180.0,(1.0-cage_stpts_output[1,:,idx_f])*180.0-90.0,'+',ms=14,color="black")
 
 	ax1_1=fig1.add_axes([0.02, 0.45, 0.25, 0.55])
 	plt.title("$t={:d}$ s".format(int(output_times[idx_f])),fontsize=20)
@@ -292,7 +249,7 @@ for idx_f in range(len(file_IDs)):
 	for idx in range(1,frames_per_step):
 		call_result=call(["cp","./anim_temp/img{:03d}.png".format(plot_idx-1),"./anim_temp/img{:03d}.png".format(plot_idx)])
 		plot_idx+=1
-	if idx_f==len(file_IDs)-1:
+	if idx_f==num_frames-1:
 		for idx in range(pad_end_frames):
 			call_result=call(["cp","./anim_temp/img{:03d}.png".format(plot_idx-1),"./anim_temp/img{:03d}.png".format(plot_idx)])
 			plot_idx+=1

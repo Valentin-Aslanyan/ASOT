@@ -1,7 +1,9 @@
 
+"""
+Display expansion factor (B_upper/B_lower, where upper/lower are taken at two radii) from modified version of QSL Squasher (not included in this distribution)
+"""
 
-filename="./PFLS/0044295/qslR3Expansion.bin"
-
+filename="./PFLS/0000000/qslR3Expansion.bin"
 theta_limits=[-70,60]
 phi_limits=[-100,100]
 
@@ -29,9 +31,9 @@ plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 
 fig1=plt.figure(figsize=(10,5))
-color_plot1=plt.pcolormesh(grid_phi/np.pi*180.0,grid_theta/np.pi*180.0,np.log(Expansion_grid+0.1)/np.log(10.0),rasterized=True,vmin=1.4,vmax=3.0,cmap="hot_r")
+color_plot1=plt.pcolormesh(grid_phi*RAD2DEG,grid_theta*RAD2DEG-90.0,(np.log(Expansion_grid+0.1)/np.log(10.0))[:-1,:-1],rasterized=True,vmin=1.4,vmax=3.0,cmap="hot_r")
 if plot_contour:
-	contour1=plt.contour(grid_phi/np.pi*180.0,grid_theta/np.pi*180.0,np.log(Expansion_grid+0.1)/np.log(10.0),[1.0],colors=["blue"])
+	contour1=plt.contour(grid_phi*RAD2DEG,grid_theta*RAD2DEG-90.0,np.log(Expansion_grid+0.1)/np.log(10.0),[1.0],colors=["blue"])
 
 cbar1=fig1.colorbar(color_plot1)
 cbar1.ax.tick_params(labelsize=19,direction='in', left=True, right=True)
