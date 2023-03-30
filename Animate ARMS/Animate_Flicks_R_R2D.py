@@ -75,7 +75,7 @@ for idx_f in range(len(target_R)):
 	fig=plt.figure(figsize=(14,10))
 	ax=fig.gca()
 	plt.tight_layout()
-	color_plot=plt.pcolormesh(grid_phi*RAD2DEG,grid_theta*RAD2DEG+90.0,data_list[idx_f],cmap='hot_r',vmin=min_data,vmax=1.0)#max_data)
+	color_plot=plt.pcolormesh(grid_phi*RAD2DEG,grid_theta*RAD2DEG-90.0,data_list[idx_f],cmap='hot_r',vmin=min_data,vmax=1.0)#max_data)
 	cbar=fig.colorbar(color_plot)#,ticks=[-4,-3,-2,-1,0])
 	cbar.ax.tick_params(labelsize=19,direction='in', left=True, right=True)
 	cbar.set_label(label=r"Quantity",fontsize=20)
@@ -88,7 +88,7 @@ for idx_f in range(len(target_R)):
 		else:
 			time_label=plt.text(phi_limits[0]+0.1*(phi_limits[1]-phi_limits[0]),70,R_label_function(target_R[idx_f]),fontsize=26)
 	elif theta_limits!=None:
-		time_label=plt.text(-170,theta_limits[0]+0.9*(theta_limits[1]-theta_limits[0]),R_label_function(target_R[idx_f]),fontsize=26)			
+		time_label=plt.text(-170,theta_limits[0]-90.0+0.9*(theta_limits[1]-theta_limits[0]),R_label_function(target_R[idx_f]),fontsize=26)			
 	else:
 		time_label=plt.text(-170,70,R_label_function(target_R[idx_f]),fontsize=26)
 	if phi_limits!=None:
