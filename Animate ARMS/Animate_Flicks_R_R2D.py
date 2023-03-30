@@ -75,7 +75,7 @@ for idx_f in range(len(target_R)):
 	fig=plt.figure(figsize=(14,10))
 	ax=fig.gca()
 	plt.tight_layout()
-	color_plot=plt.pcolormesh(grid_phi*RAD2DEG,grid_theta*RAD2DEG-90.0,data_list[idx_f],cmap='hot_r',vmin=min_data,vmax=1.0)#max_data)
+	color_plot=plt.pcolormesh(grid_phi*RAD2DEG,grid_theta*RAD2DEG-90.0,data_list[idx_f],cmap='hot_r',vmin=min_data,vmax=max_data)
 	cbar=fig.colorbar(color_plot)#,ticks=[-4,-3,-2,-1,0])
 	cbar.ax.tick_params(labelsize=19,direction='in', left=True, right=True)
 	cbar.set_label(label=r"Quantity",fontsize=20)
