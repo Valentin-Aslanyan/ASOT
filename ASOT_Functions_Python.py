@@ -165,6 +165,47 @@ def read_flicks_file(file_directory,flicks_file):
 	return time,ntblks,nlblks,newgrd,coord_logR,coord_theta,coord_phi,data
 
 
+#Dummy function for replicating header with added variable
+def duplicate_flicks_header(input_directory,output_directory,new_variable_name):
+	infile=open(os.path.join(input_directory,"flicks.hdr"),"r")
+	outfile=open(os.path.join(output_directory,"flicks.hdr"),"w")
+	for line in infile:
+		print(line,end="",file=outfile)
+	infile.close()
+	print(new_variable_name+"\n",end="",file=outfile)
+	outfile.close()
+
+
+#Duplicate flicks file while appending/overwriting data inside; filenames must be full paths; ensure header is correct
+def duplicate_flicks_file(input_filename,output_filename,nvar_old,data):
+	nlblks,n3p,n2p,n1p,nvar_new=np.shape(data)
+	infile=open(input_filename,"rb")
+	outfile=open(output_filename,"wb")
+	outfile.write(infile.read(37))
+	ntblks=struct.unpack('>i', infile.read(4))[0]
+	outfile.write(struct.pack('>i',ntblks))
+	outfile.write(infile.read(12))
+
+	idx_leaf=0
+	for idx_blk in range(ntblks):
+		outfile.write(infile.read(4))
+		iputwrk_raw=infile.read(21*4)
+		outfile.write(iputwrk_raw)
+		iputwrk=struct.unpack('>'+21*'i', iputwrk_raw)
+		outfile.write(infile.read(36))
+		if iputwrk[2]==1:
+			for idx_p in range(n3p):
+				for idx_t in range(n2p):
+					for idx_r in range(n1p):
+						infile.read(8+nvar_old*4)
+						outfile.write(struct.pack('>i',nvar_new*4))
+						outfile.write(struct.pack('>'+nvar_new*'f',*data[idx_leaf,idx_p,idx_t,idx_r,:]))
+						outfile.write(struct.pack('>i',nvar_new*4))
+			idx_leaf+=1
+	infile.close()
+	outfile.close()
+
+
 def get_flicks_time(flicks_file):
 	"""
 	Simulation time from flicks file
