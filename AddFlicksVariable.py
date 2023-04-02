@@ -15,16 +15,26 @@ def new_variable_function(data_in):
 
 import sys
 sys.path[:0]=['/Change/This/Path']
-from ARMS_ASOT_Functions import *
+from ASOT_Functions_Python import *
 
 
+new_variable_min=None
+new_variable_max=None
 duplicate_flicks_header(input_directory,output_directory,new_variable_name)
 for label in flicks_labels:
 	time,ntblks,nlblks,newgrd,coord_logR,coord_theta,coord_phi,data_old=read_flicks_file(input_directory,"flicks."+str(label))
 	nvar_old=np.shape(data_old)[-1]
-	data_new=np.concatenate((data_old,np.expand_dims(new_variable_function(data_old),axis=4)),axis=4)
+	new_variable_arr=new_variable_function(data_old)
+	if new_variable_min==None:
+		new_variable_min=min(new_variable_arr.flatten())
+	else:
+		new_variable_min=min(new_variable_min,min(new_variable_arr.flatten()))
+	if new_variable_max==None:
+		new_variable_max=max(new_variable_arr.flatten())
+	else:
+		new_variable_max=max(new_variable_max,max(new_variable_arr.flatten()))
+	data_new=np.concatenate((data_old,np.expand_dims(new_variable_arr,axis=4)),axis=4)
 	duplicate_flicks_file(os.path.join(input_directory,"flicks."+str(label)),os.path.join(output_directory,"flicks."+str(label)),nvar_old,data_new)
-
-
+duplicate_flicks_footer(input_directory,output_directory,new_variable_name[1:],new_variable_min,new_variable_max)
 
 

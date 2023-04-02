@@ -176,6 +176,18 @@ def duplicate_flicks_header(input_directory,output_directory,new_variable_name):
 	outfile.close()
 
 
+#Dummy function for replicating footer with added variable
+def duplicate_flicks_footer(input_directory,output_directory,new_variable_name,new_variable_min,new_variable_max):
+	infile=open(os.path.join(input_directory,"flicks.ftr"),"r")
+	outfile=open(os.path.join(output_directory,"flicks.ftr"),"w")
+	for line in infile:
+		print(line,end="",file=outfile)
+	infile.close()
+	print("{: .5E}Min ".format(new_variable_min)+new_variable_name+"\n",end="",file=outfile)
+	print("{: .5E}Max ".format(new_variable_max)+new_variable_name+"\n",end="",file=outfile)
+	outfile.close()
+
+
 #Duplicate flicks file while appending/overwriting data inside; filenames must be full paths; ensure header is correct
 def duplicate_flicks_file(input_filename,output_filename,nvar_old,data):
 	nlblks,n3p,n2p,n1p,nvar_new=np.shape(data)
