@@ -1,5 +1,15 @@
 
 
+file_directory="./"
+flicks_file="flicks.0000000"
+target_z=0.0 #Take slice at this z, ARMS coordinates
+
+import numpy as np
+#Use this to define 2D data array desired: log(rho), B^2 etc...
+def data_slice(data_in):
+	return np.sqrt(data_in[:,6]**2+data_in[:,7]**2+data_in[:,8]**2)
+
+
 import sys
 sys.path[:0]=['/Change/This/Path']
 from ASOT_Functions_Python import *
@@ -10,16 +20,11 @@ from mayavi import mlab
 from scipy.interpolate import griddata
 
 
-#Use this to define 2D data array desired: log(rho), B^2 etc...
-def data_slice(data_in):
-	return data_in[:,6]#np.sqrt(data_in[:,6]**2+data_in[:,7]**2+data_in[:,8]**2)
-
-target_z=0.0
 size_x_grid=500
 size_y_grid=500
 
 
-time,ntblks,nlblks,newgrd,coord_x,coord_y,coord_z,data=read_flicks_file("./","flicks.002200")
+time,ntblks,nlblks,newgrd,coord_x,coord_y,coord_z,data=read_flicks_file(file_directory,flicks_file)
 new_x,new_y,new_data=z_slice(target_z,coord_x,coord_y,coord_z,data)
 target_data=data_slice(new_data)
 
@@ -41,7 +46,6 @@ data_grid=griddata((new_x,new_y), target_data, (grid_x,grid_y), method='linear')
 sphere_mesh=mlab.mesh(grid_x,grid_y,grid_z,scalars=data_grid[:,:],colormap='hsv')
 mlab.view(azimuth=0, elevation=110, roll=90, distance=4.0)#, focalpoint=None, roll=None, reset_roll=True, figure=None)
 mlab.show()
-
 
 plt.pcolormesh(grid_x,grid_y,data_grid)
 plt.show()
