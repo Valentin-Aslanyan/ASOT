@@ -103,8 +103,13 @@ def read_flicks_file(file_directory,flicks_file):
 	for idx in range(2):
 		hdrfile.readline()
 	line=hdrfile.readline()
-	if 'spherical exponential' not in line.lower():
+	if 'spherical exponential' in line.lower():
+		flicks_type="SphE"
+	elif 'cartesian' in line.lower():
+		flicks_type="Cart"
+	else:
 		print('Warning! Coordinate type "'+line+'" not recognized')
+		flicks_type="Unknown"
 	line=hdrfile.readline()
 	n1p=int(line[:2])
 	line=hdrfile.readline()
@@ -136,33 +141,65 @@ def read_flicks_file(file_directory,flicks_file):
 	newgrd=struct.unpack('>i', flicksfile.read(4))[0]
 	flicksfile.read(4)
 
-	coord_logR=np.zeros((nlblks,2))
-	coord_theta=np.zeros((nlblks,2))
-	coord_phi=np.zeros((nlblks,2))
-	data=np.zeros((nlblks,n3p,n2p,n1p,nvar))
+	if flicks_type=="SphE":
+		coord_logR=np.zeros((nlblks,2))
+		coord_theta=np.zeros((nlblks,2))
+		coord_phi=np.zeros((nlblks,2))
+		data=np.zeros((nlblks,n3p,n2p,n1p,nvar))
 
-	idx_leaf=0
-	for idx_blk in range(ntblks):
-		flicksfile.read(4)
-		iputwrk=struct.unpack('>'+21*'i', flicksfile.read(21*4))
-		flicksfile.read(8)
-		rputwrk=struct.unpack('>'+6*'f', flicksfile.read(6*4))
-		flicksfile.read(4)
-		if iputwrk[2]==1:
-			coord_logR[idx_leaf,:]=[rputwrk[0],rputwrk[1]]
-			coord_theta[idx_leaf,:]=[rputwrk[2]+np.pi*0.5,rputwrk[3]+np.pi*0.5]
-			coord_phi[idx_leaf,:]=[rputwrk[4],rputwrk[5]]
-			for idx_p in range(n3p):
-				for idx_t in range(n2p):
-					for idx_r in range(n1p):
-						flicksfile.read(4)
-						data[idx_leaf,idx_p,idx_t,idx_r,:]=struct.unpack('>'+nvar*'f', flicksfile.read(nvar*4))
-						flicksfile.read(4)
-			idx_leaf+=1
+		idx_leaf=0
+		for idx_blk in range(ntblks):
+			flicksfile.read(4)
+			iputwrk=struct.unpack('>'+21*'i', flicksfile.read(21*4))
+			flicksfile.read(8)
+			rputwrk=struct.unpack('>'+6*'f', flicksfile.read(6*4))
+			flicksfile.read(4)
+			if iputwrk[2]==1:
+				coord_logR[idx_leaf,:]=[rputwrk[0],rputwrk[1]]
+				coord_theta[idx_leaf,:]=[rputwrk[2]+np.pi*0.5,rputwrk[3]+np.pi*0.5]
+				coord_phi[idx_leaf,:]=[rputwrk[4],rputwrk[5]]
+				for idx_p in range(n3p):
+					for idx_t in range(n2p):
+						for idx_r in range(n1p):
+							flicksfile.read(4)
+							data[idx_leaf,idx_p,idx_t,idx_r,:]=struct.unpack('>'+nvar*'f', flicksfile.read(nvar*4))
+							flicksfile.read(4)
+				idx_leaf+=1
 
 
-	flicksfile.close()
-	return time,ntblks,nlblks,newgrd,coord_logR,coord_theta,coord_phi,data
+		flicksfile.close()
+		return time,ntblks,nlblks,newgrd,coord_logR,coord_theta,coord_phi,data
+
+	elif flicks_type=="Cart":
+		coord_x=np.zeros((nlblks,2))
+		coord_y=np.zeros((nlblks,2))
+		coord_z=np.zeros((nlblks,2))
+		data=np.zeros((nlblks,n3p,n2p,n1p,nvar))
+
+		idx_leaf=0
+		for idx_blk in range(ntblks):
+			flicksfile.read(4)
+			iputwrk=struct.unpack('>'+21*'i', flicksfile.read(21*4))
+			flicksfile.read(8)
+			rputwrk=struct.unpack('>'+6*'f', flicksfile.read(6*4))
+			flicksfile.read(4)
+			if iputwrk[2]==1:
+				coord_x[idx_leaf,:]=[rputwrk[0],rputwrk[1]]
+				coord_y[idx_leaf,:]=[rputwrk[2],rputwrk[3]]
+				coord_z[idx_leaf,:]=[rputwrk[4],rputwrk[5]]
+				for idx_z in range(n3p):
+					for idx_y in range(n2p):
+						for idx_x in range(n1p):
+							flicksfile.read(4)
+							data[idx_leaf,idx_z,idx_y,idx_x,:]=struct.unpack('>'+nvar*'f', flicksfile.read(nvar*4))
+							flicksfile.read(4)
+				idx_leaf+=1
+
+
+		flicksfile.close()
+		return time,ntblks,nlblks,newgrd,coord_x,coord_y,coord_z,data
+	else:
+		return 0.0,1,1,0,np.zeros((1,2)),np.zeros((1,2)),np.zeros((1,2)),np.zeros((1,1,1,1,1))
 
 
 #Dummy function for replicating header with added variable
@@ -450,6 +487,41 @@ def R_slice(target_R,coord_logR,coord_theta,coord_phi,data):
 				for idx_v in range(nvar):
 					new_data[idx*n3p*n2p+idx_p*n2p+idx_t,idx_v]=interp_pointpair(target_logR_actual,logR_low,logR_high,data[bounding_lblk[idx],idx_p,idx_t,idx_logR,idx_v], data[bounding_lblk[idx],idx_p,idx_t,idx_logR+1,idx_v])
 	return new_theta,new_phi,new_data
+
+
+def z_slice(target_z,coord_x,coord_y,coord_z,data):
+	"""
+	Get data in a single plane of given z
+	Routine will find blocks which straddle target_z and interpolate linearly
+	"""
+	nlblk,n1p,n2p,n3p,nvar=get_flicks_grid_dimensions(data)
+	num_blocks=len(coord_x[:,0])
+	bounding_lblk=[]
+	for idx in range(num_blocks):
+		if coord_z[idx,0]<coord_z[idx,1]:
+			if coord_z[idx,0]<=target_z and coord_z[idx,1]>=target_z:
+				bounding_lblk.append(idx)
+		else:
+			if coord_z[idx,0]>=target_z and coord_z[idx,1]<=target_z:
+				bounding_lblk.append(idx)
+
+	new_x=np.zeros((len(bounding_lblk)*n1p*n2p))
+	new_y=np.zeros((len(bounding_lblk)*n1p*n2p))
+	new_data=np.zeros((len(bounding_lblk)*n1p*n2p,nvar))
+
+	for idx in range(len(bounding_lblk)):
+		idx_z=int(np.floor((target_z-coord_z[bounding_lblk[idx],0])/(coord_z[bounding_lblk[idx],1]-coord_z[bounding_lblk[idx],0])*(n3p-1)))
+		if idx_z==n3p-1:
+			idx_z=n3p-2
+		for idx_y in range(n2p):
+			for idx_x in range(n1p):
+				new_x[idx*n1p*n2p+idx_x*n2p+idx_y]=idx_x/(n1p-1)*(coord_x[bounding_lblk[idx],1]-coord_x[bounding_lblk[idx],0])+coord_x[bounding_lblk[idx],0]
+				new_y[idx*n1p*n2p+idx_x*n2p+idx_y]=idx_y/(n2p-1)*(coord_y[bounding_lblk[idx],1]-coord_y[bounding_lblk[idx],0])+coord_y[bounding_lblk[idx],0]
+				z_low=idx_z/(n3p-1)*(coord_z[bounding_lblk[idx],1]-coord_z[bounding_lblk[idx],0])+coord_z[bounding_lblk[idx],0]
+				z_high=(idx_z+1)/(n3p-1)*(coord_z[bounding_lblk[idx],1]-coord_z[bounding_lblk[idx],0])+coord_z[bounding_lblk[idx],0]
+				for idx_v in range(nvar):
+					new_data[idx*n1p*n2p+idx_x*n2p+idx_y,idx_v]=interp_pointpair(target_z,z_low,z_high,data[bounding_lblk[idx],idx_z,idx_y,idx_x,idx_v], data[bounding_lblk[idx],idx_z,idx_y,idx_z+1,idx_v])
+	return new_x,new_y,new_data
 
 
 def get_full_unstructured_cart_grid_noedge(coord_logR,coord_theta,coord_phi,data):
