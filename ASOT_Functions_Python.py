@@ -846,9 +846,9 @@ def find_flicks_idx(new_logR,new_theta,new_phi,coord_logR,coord_theta,coord_phi,
 	return idx_flicks,block_found
 
 
-def rk4_field_trace_flicks(pos_in,coord_logR,coord_theta,coord_phi,B_flicks,dt,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks):
+def rk4_field_trace_flicks_SphE(pos_in,coord_logR,coord_theta,coord_phi,B_flicks,dt,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks):
 	"""
-	RK4 field line integration, flicks grid
+	RK4 field line integration, Spherical Exponential flicks grid
 	Currently sub-optimal due to switching back and forth to Cartesian coordinates
 	TODO - fully spherical
 	"""
@@ -1018,6 +1018,134 @@ def rk4_field_trace_flicks(pos_in,coord_logR,coord_theta,coord_phi,B_flicks,dt,n
 		p_4=0.0
 
 	return np.array([r_4,t_4,p_4]),idx_flicks,block_found
+
+
+def rk4_field_trace_flicks_Cart(pos_in,coord_x,coord_y,coord_z,B_flicks,dt,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks):
+	"""
+	RK4 field line integration, Cartesian flicks grid
+	"""
+	x_0=pos_in[0]
+	y_0=pos_in[1]
+	z_0=pos_in[2]
+
+	idx_flicks,block_found=find_flicks_idx(x_0,y_0,z_0,coord_x,coord_y,coord_z,nlblks,idx_flicks)
+	if block_found:
+		idx_x=int(np.floor((x_0-coord_x[idx_flicks,0])*n1pm1/(coord_x[idx_flicks,1]-coord_x[idx_flicks,0])))
+		if idx_x==n1pm1:
+			idx_x=n1pm1-1
+		idx_y=int(np.floor((y_0-coord_y[idx_flicks,0])*n2pm1/(coord_y[idx_flicks,1]-coord_y[idx_flicks,0])))
+		if idx_y==n2pm1:
+			idx_y=n2pm1-1
+		idx_z=int(np.floor((z_0-coord_z[idx_flicks,0])*n3pm1/(coord_z[idx_flicks,1]-coord_z[idx_flicks,0])))
+		if idx_z==n3pm1:
+			idx_z=n3pm1-1
+
+		xl=idx_x/n1pm1*(coord_x[idx_flicks,1]-coord_x[idx_flicks,0])+coord_x[idx_flicks,0]
+		xr=(idx_x+1)/n1pm1*(coord_x[idx_flicks,1]-coord_x[idx_flicks,0])+coord_x[idx_flicks,0]
+		yl=idx_y/n2pm1*(coord_y[idx_flicks,1]-coord_y[idx_flicks,0])+coord_y[idx_flicks,0]
+		yr=(idx_y+1)/n2pm1*(coord_y[idx_flicks,1]-coord_y[idx_flicks,0])+coord_y[idx_flicks,0]
+		zl=idx_z/n3pm1*(coord_z[idx_flicks,1]-coord_z[idx_flicks,0])+coord_z[idx_flicks,0]
+		zr=(idx_z+1)/n3pm1*(coord_z[idx_flicks,1]-coord_z[idx_flicks,0])+coord_z[idx_flicks,0]
+
+		B_0=Trilinear_interpolation(x_0,y_0,z_0,xl,xr,yl,yr,zl,zr,B_flicks[idx_flicks,idx_z,idx_y,idx_x,:],B_flicks[idx_flicks,idx_z+1,idx_y,idx_x,:],B_flicks[idx_flicks,idx_z,idx_y+1,idx_x,:], B_flicks[idx_flicks,idx_z+1,idx_y+1,idx_x,:],B_flicks[idx_flicks,idx_z,idx_y,idx_x+1,:], B_flicks[idx_flicks,idx_z+1,idx_y,idx_x+1,:],B_flicks[idx_flicks,idx_z,idx_y+1,idx_x+1,:], B_flicks[idx_flicks,idx_z+1,idx_y+1,idx_x+1,:])
+		B_0=B_0/np.sqrt(B_0[0]*B_0[0]+B_0[1]*B_0[1]+B_0[2]*B_0[2])
+		k_1_x=dt*B_0[0]
+		k_1_y=dt*B_0[1]
+		k_1_z=dt*B_0[2]
+
+		x_1=x_0+k_1_x*0.5
+		y_1=y_0+k_1_y*0.5
+		z_1=z_0+k_1_z*0.5
+	if block_found:
+		idx_flicks,block_found=find_flicks_idx(x_1,y_1,z_1,coord_x,coord_y,coord_z,nlblks,idx_flicks)
+	if block_found:
+		idx_x=int(np.floor((x_1-coord_x[idx_flicks,0])*n1pm1/(coord_x[idx_flicks,1]-coord_x[idx_flicks,0])))
+		if idx_x==n1pm1:
+			idx_x=n1pm1-1
+		idx_y=int(np.floor((y_1-coord_y[idx_flicks,0])*n2pm1/(coord_y[idx_flicks,1]-coord_y[idx_flicks,0])))
+		if idx_y==n2pm1:
+			idx_y=n2pm1-1
+		idx_z=int(np.floor((z_1-coord_z[idx_flicks,0])*n3pm1/(coord_z[idx_flicks,1]-coord_z[idx_flicks,0])))
+		if idx_z==n3pm1:
+			idx_z=n3pm1-1
+
+		xl=idx_x/n1pm1*(coord_x[idx_flicks,1]-coord_x[idx_flicks,0])+coord_x[idx_flicks,0]
+		xr=(idx_x+1)/n1pm1*(coord_x[idx_flicks,1]-coord_x[idx_flicks,0])+coord_x[idx_flicks,0]
+		yl=idx_y/n2pm1*(coord_y[idx_flicks,1]-coord_y[idx_flicks,0])+coord_y[idx_flicks,0]
+		yr=(idx_y+1)/n2pm1*(coord_y[idx_flicks,1]-coord_y[idx_flicks,0])+coord_y[idx_flicks,0]
+		zl=idx_z/n3pm1*(coord_z[idx_flicks,1]-coord_z[idx_flicks,0])+coord_z[idx_flicks,0]
+		zr=(idx_z+1)/n3pm1*(coord_z[idx_flicks,1]-coord_z[idx_flicks,0])+coord_z[idx_flicks,0]
+		B_1=Trilinear_interpolation(x_1,y_1,z_1,xl,xr,yl,yr,zl,zr,B_flicks[idx_flicks,idx_z,idx_y,idx_x,:],B_flicks[idx_flicks,idx_z+1,idx_y,idx_x,:],B_flicks[idx_flicks,idx_z,idx_y+1,idx_x,:], B_flicks[idx_flicks,idx_z+1,idx_y+1,idx_x,:],B_flicks[idx_flicks,idx_z,idx_y,idx_x+1,:], B_flicks[idx_flicks,idx_z+1,idx_y,idx_x+1,:],B_flicks[idx_flicks,idx_z,idx_y+1,idx_x+1,:], B_flicks[idx_flicks,idx_z+1,idx_y+1,idx_x+1,:])
+		B_1=B_1/np.sqrt(B_1[0]*B_1[0]+B_1[1]*B_1[1]+B_1[2]*B_1[2])
+		k_2_x=dt*B_1[0]
+		k_2_y=dt*B_1[1]
+		k_2_z=dt*B_1[2]
+		
+		x_2=x_0+k_2_x*0.5
+		y_2=y_0+k_2_y*0.5
+		z_2=z_0+k_2_z*0.5
+	if block_found:
+		idx_flicks,block_found=find_flicks_idx(x_2,y_2,z_2,coord_x,coord_y,coord_z,nlblks,idx_flicks)
+	if block_found:
+		idx_x=int(np.floor((x_2-coord_x[idx_flicks,0])*n1pm1/(coord_x[idx_flicks,1]-coord_x[idx_flicks,0])))
+		if idx_x==n1pm1:
+			idx_x=n1pm1-1
+		idx_y=int(np.floor((y_2-coord_y[idx_flicks,0])*n2pm1/(coord_y[idx_flicks,1]-coord_y[idx_flicks,0])))
+		if idx_y==n2pm1:
+			idx_y=n2pm1-1
+		idx_z=int(np.floor((z_2-coord_z[idx_flicks,0])*n3pm1/(coord_z[idx_flicks,1]-coord_z[idx_flicks,0])))
+		if idx_z==n3pm1:
+			idx_z=n3pm1-1
+
+		xl=idx_x/n1pm1*(coord_x[idx_flicks,1]-coord_x[idx_flicks,0])+coord_x[idx_flicks,0]
+		xr=(idx_x+1)/n1pm1*(coord_x[idx_flicks,1]-coord_x[idx_flicks,0])+coord_x[idx_flicks,0]
+		yl=idx_y/n2pm1*(coord_y[idx_flicks,1]-coord_y[idx_flicks,0])+coord_y[idx_flicks,0]
+		yr=(idx_y+1)/n2pm1*(coord_y[idx_flicks,1]-coord_y[idx_flicks,0])+coord_y[idx_flicks,0]
+		zl=idx_z/n3pm1*(coord_z[idx_flicks,1]-coord_z[idx_flicks,0])+coord_z[idx_flicks,0]
+		zr=(idx_z+1)/n3pm1*(coord_z[idx_flicks,1]-coord_z[idx_flicks,0])+coord_z[idx_flicks,0]
+		B_2=Trilinear_interpolation(x_2,y_2,z_2,xl,xr,yl,yr,zl,zr,B_flicks[idx_flicks,idx_z,idx_y,idx_x,:],B_flicks[idx_flicks,idx_z+1,idx_y,idx_x,:],B_flicks[idx_flicks,idx_z,idx_y+1,idx_x,:], B_flicks[idx_flicks,idx_z+1,idx_y+1,idx_x,:],B_flicks[idx_flicks,idx_z,idx_y,idx_x+1,:], B_flicks[idx_flicks,idx_z+1,idx_y,idx_x+1,:],B_flicks[idx_flicks,idx_z,idx_y+1,idx_x+1,:], B_flicks[idx_flicks,idx_z+1,idx_y+1,idx_x+1,:])
+		B_2=B_2/np.sqrt(B_2[0]*B_2[0]+B_2[1]*B_2[1]+B_2[2]*B_2[2])
+		k_3_x=dt*B_2[0]
+		k_3_y=dt*B_2[1]
+		k_3_z=dt*B_2[2]
+
+		x_3=x_0+k_3_x
+		y_3=y_0+k_3_y
+		z_3=z_0+k_3_z
+	if block_found:
+		idx_flicks,block_found=find_flicks_idx(x_3,y_3,z_3,coord_x,coord_y,coord_z,nlblks,idx_flicks)
+	if block_found:
+		idx_x=int(np.floor((x_3-coord_x[idx_flicks,0])*n1pm1/(coord_x[idx_flicks,1]-coord_x[idx_flicks,0])))
+		if idx_x==n1pm1:
+			idx_x=n1pm1-1
+		idx_y=int(np.floor((y_3-coord_y[idx_flicks,0])*n2pm1/(coord_y[idx_flicks,1]-coord_y[idx_flicks,0])))
+		if idx_y==n2pm1:
+			idx_y=n2pm1-1
+		idx_z=int(np.floor((z_3-coord_z[idx_flicks,0])*n3pm1/(coord_z[idx_flicks,1]-coord_z[idx_flicks,0])))
+		if idx_z==n3pm1:
+			idx_z=n3pm1-1
+
+		xl=idx_x/n1pm1*(coord_x[idx_flicks,1]-coord_x[idx_flicks,0])+coord_x[idx_flicks,0]
+		xr=(idx_x+1)/n1pm1*(coord_x[idx_flicks,1]-coord_x[idx_flicks,0])+coord_x[idx_flicks,0]
+		yl=idx_y/n2pm1*(coord_y[idx_flicks,1]-coord_y[idx_flicks,0])+coord_y[idx_flicks,0]
+		yr=(idx_y+1)/n2pm1*(coord_y[idx_flicks,1]-coord_y[idx_flicks,0])+coord_y[idx_flicks,0]
+		zl=idx_z/n3pm1*(coord_z[idx_flicks,1]-coord_z[idx_flicks,0])+coord_z[idx_flicks,0]
+		zr=(idx_z+1)/n3pm1*(coord_z[idx_flicks,1]-coord_z[idx_flicks,0])+coord_z[idx_flicks,0]
+		B_3=Trilinear_interpolation(x_3,y_3,z_3,xl,xr,yl,yr,zl,zr,B_flicks[idx_flicks,idx_z,idx_y,idx_x,:],B_flicks[idx_flicks,idx_z+1,idx_y,idx_x,:],B_flicks[idx_flicks,idx_z,idx_y+1,idx_x,:], B_flicks[idx_flicks,idx_z+1,idx_y+1,idx_x,:],B_flicks[idx_flicks,idx_z,idx_y,idx_x+1,:], B_flicks[idx_flicks,idx_z+1,idx_y,idx_x+1,:],B_flicks[idx_flicks,idx_z,idx_y+1,idx_x+1,:], B_flicks[idx_flicks,idx_z+1,idx_y+1,idx_x+1,:])
+		B_3=B_3/np.sqrt(B_3[0]*B_3[0]+B_3[1]*B_3[1]+B_3[2]*B_3[2])
+		k_4_x=dt*B_3[0]
+		k_4_y=dt*B_3[1]
+		k_4_z=dt*B_3[2]
+
+		x_4=x_0+(k_1_x+2.0*k_2_x+2.0*k_3_x+k_4_x)/6.0
+		y_4=y_0+(k_1_y+2.0*k_2_y+2.0*k_3_y+k_4_y)/6.0
+		z_4=z_0+(k_1_z+2.0*k_2_z+2.0*k_3_z+k_4_z)/6.0
+	else:
+		x_4=0.0
+		y_4=0.0
+		z_4=0.0
+
+	return np.array([x_4,y_4,z_4]),idx_flicks,block_found
 
 
 def rk4_velocity_trace_flicks(pos_in,coord_logR,coord_theta,coord_phi,v_flicks,dt,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks,solar_Radius):
@@ -1256,7 +1384,8 @@ def field_line_spherical(position0,R,theta,phi,B,R_min,R_max,max_steps=1E6,step_
 	return final_curve
 
 
-def field_line_flicks(position0,coord_logR,coord_theta,coord_phi,B_flicks,R_min,R_max,nlblks,n1pm1,n2pm1,n3pm1,max_steps=1E6,step_size=1E-2):
+#For Spherical Exponential, interpret the arguments as (position0,coord_logR,coord_theta,coord_phi,B_flicks,R_min,R_max...)
+def field_line_flicks(position0,coord_x,coord_y,coord_z,B_flicks,z_min,z_max,nlblks,n1pm1,n2pm1,n3pm1,coord_type="SphE",max_steps=1E6,step_size=1E-2):
 	"""
 	Obtain back-and-forth field line, flicks grid
 	"""
@@ -1264,25 +1393,45 @@ def field_line_flicks(position0,coord_logR,coord_theta,coord_phi,B_flicks,R_min,
 	backward_temp=np.zeros((max_steps,3))
 	backward_temp[0,:]=position0
 	backward_num=0
-	idx_flicks,block_found=find_flicks_idx(np.log(position0[0]),position0[1],position0[2],coord_logR,coord_theta,coord_phi,nlblks,0)
-	idx=1
-	while block_found and idx<max_steps:
-		backward_temp[idx,:],idx_flicks,block_found=rk4_field_trace_flicks(backward_temp[idx-1,:],coord_logR,coord_theta,coord_phi,-B_flicks,step_size,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks)
-		if backward_temp[idx,0]>R_max or backward_temp[idx,0]<R_min:
-			backward_num=idx+1
-			idx=max_steps+1
-		idx+=1
+	if coord_type.lower()=="sphe":
+		idx_flicks,block_found=find_flicks_idx(np.log(position0[0]),position0[1],position0[2],coord_x,coord_y,coord_z,nlblks,0)
+		idx=1
+		while block_found and idx<max_steps:
+			backward_temp[idx,:],idx_flicks,block_found=rk4_field_trace_flicks_SphE(backward_temp[idx-1,:],coord_x,coord_y,coord_z,-B_flicks,step_size,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks)
+			if backward_temp[idx,0]>z_max or backward_temp[idx,0]<z_min:
+				backward_num=idx+1
+				idx=max_steps+1
+			idx+=1
+	elif coord_type.lower()[:4]=="cart":
+		idx_flicks,block_found=find_flicks_idx(position0[0],position0[1],position0[2],coord_x,coord_y,coord_z,nlblks,0)
+		idx=1
+		while block_found and idx<max_steps:
+			backward_temp[idx,:],idx_flicks,block_found=rk4_field_trace_flicks_Cart(backward_temp[idx-1,:],coord_x,coord_y,coord_z,-B_flicks,step_size,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks)
+			if backward_temp[idx,2]>z_max or backward_temp[idx,2]<z_min:
+				break
+			idx+=1
+		backward_num=idx
 	forward_temp=np.zeros((max_steps,3))
 	forward_temp[0,:]=position0
 	forward_num=0
-	idx_flicks,block_found=find_flicks_idx(np.log(position0[0]),position0[1],position0[2],coord_logR,coord_theta,coord_phi,nlblks,0)
-	idx=1
-	while block_found and idx<max_steps:
-		forward_temp[idx,:],idx_flicks,block_found=rk4_field_trace_flicks(forward_temp[idx-1,:],coord_logR,coord_theta,coord_phi,B_flicks,step_size,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks)
-		if forward_temp[idx,0]>R_max or forward_temp[idx,0]<R_min:
-			forward_num=idx+1
-			idx=max_steps+1
-		idx+=1
+	if coord_type.lower()=="sphe":
+		idx_flicks,block_found=find_flicks_idx(np.log(position0[0]),position0[1],position0[2],coord_x,coord_y,coord_z,nlblks,0)
+		idx=1
+		while block_found and idx<max_steps:
+			forward_temp[idx,:],idx_flicks,block_found=rk4_field_trace_flicks_SphE(forward_temp[idx-1,:],coord_x,coord_y,coord_z,B_flicks,step_size,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks)
+			if forward_temp[idx,0]>z_max or forward_temp[idx,0]<z_min:
+				forward_num=idx+1
+				idx=max_steps+1
+			idx+=1
+	elif coord_type.lower()[:4]=="cart":
+		idx_flicks,block_found=find_flicks_idx(position0[0],position0[1],position0[2],coord_x,coord_y,coord_z,nlblks,0)
+		idx=1
+		while block_found and idx<max_steps:
+			forward_temp[idx,:],idx_flicks,block_found=rk4_field_trace_flicks_Cart(forward_temp[idx-1,:],coord_x,coord_y,coord_z,B_flicks,step_size,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks)
+			if forward_temp[idx,2]>z_max or forward_temp[idx,2]<z_min:
+				break
+			idx+=1
+		forward_num=idx
 	if forward_num+backward_num>3:
 		final_curve=np.zeros((forward_num+backward_num-3,3))
 		final_curve[:backward_num-2,:]=backward_temp[backward_num-2:0:-1,:]
@@ -1329,7 +1478,7 @@ def data_along_field_line_flicks(position0,coord_logR,coord_theta,coord_phi,B_fl
 
 	idx=1
 	while block_found and idx<max_steps:
-		backward_temp[idx,:3],idx_flicks,block_found=rk4_field_trace_flicks(backward_temp[idx-1,:3],coord_logR,coord_theta,coord_phi,-B_flicks,step_size,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks)
+		backward_temp[idx,:3],idx_flicks,block_found=rk4_field_trace_flicks_SphE(backward_temp[idx-1,:3],coord_logR,coord_theta,coord_phi,-B_flicks,step_size,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks)
 		if backward_temp[idx,0]>0.0:
 			idx_flicks,block_found=find_flicks_idx(np.log(backward_temp[idx,0]),backward_temp[idx,1],backward_temp[idx,2],coord_logR,coord_theta,coord_phi,nlblks,idx_flicks)
 			if block_found:
@@ -1362,7 +1511,7 @@ def data_along_field_line_flicks(position0,coord_logR,coord_theta,coord_phi,B_fl
 	idx_flicks,block_found=find_flicks_idx(np.log(position0[0]),position0[1],position0[2],coord_logR,coord_theta,coord_phi,nlblks,0)
 	idx=1
 	while block_found and idx<max_steps:
-		forward_temp[idx,:3],idx_flicks,block_found=rk4_field_trace_flicks(forward_temp[idx-1,:3],coord_logR,coord_theta,coord_phi,B_flicks,step_size,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks)
+		forward_temp[idx,:3],idx_flicks,block_found=rk4_field_trace_flicks_SphE(forward_temp[idx-1,:3],coord_logR,coord_theta,coord_phi,B_flicks,step_size,nlblks,n1pm1,n2pm1,n3pm1,idx_flicks)
 		if forward_temp[idx,0]>0.0:
 			idx_flicks,block_found=find_flicks_idx(np.log(forward_temp[idx,0]),forward_temp[idx,1],forward_temp[idx,2],coord_logR,coord_theta,coord_phi,nlblks,idx_flicks)
 			if block_found:
@@ -1476,7 +1625,7 @@ def parse_QSL_folder(folder_path):
 	return X,Y,Z,B
 
 
-def parse_QSL_Rbinfile(filename):
+def parse_QSL_Rbinfile(filename,coords_spherical=True):
 	"""
 	Load in QSL output file
 	Note - uses special version of QSLsquasher adapted to output binary data
@@ -1508,8 +1657,12 @@ def parse_QSL_Rbinfile(filename):
 
 
 	R_actual=r[0]
-	theta=theta.reshape((phi_dim,theta_dim))+np.pi*0.5
-	phi=phi.reshape((phi_dim,theta_dim))-np.pi
+	if coords_spherical:
+		theta=theta.reshape((phi_dim,theta_dim))+np.pi*0.5
+		phi=phi.reshape((phi_dim,theta_dim))-np.pi
+	else:
+		theta=theta.reshape((phi_dim,theta_dim))
+		phi=phi.reshape((phi_dim,theta_dim))
 	Q=Q.reshape((phi_dim,theta_dim))
 	return R_actual,theta,phi,Q
 
