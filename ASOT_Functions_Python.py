@@ -202,6 +202,26 @@ def read_flicks_file(file_directory,flicks_file):
 		return 0.0,1,1,0,np.zeros((1,2)),np.zeros((1,2)),np.zeros((1,2)),np.zeros((1,1,1,1,1))
 
 
+def get_flicks_coordinate_type(file_directory):
+	"""
+	Requires header file in directory
+	"""
+	#Read header file
+	hdrfile=open(os.path.join(file_directory,"flicks.hdr"),"r")
+	for idx in range(2):
+		hdrfile.readline()
+	line=hdrfile.readline()
+	if 'spherical exponential' in line.lower():
+		flicks_type="SphE"
+	elif 'cartesian' in line.lower():
+		flicks_type="Cart"
+	else:
+		print('Warning! Coordinate type "'+line+'" not recognized')
+		flicks_type="Unknown"
+	hdrfile.close()
+	return flicks_type
+
+
 #Dummy function for replicating header with added variable
 def duplicate_flicks_header(input_directory,output_directory,new_variable_name):
 	infile=open(os.path.join(input_directory,"flicks.hdr"),"r")
